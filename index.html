@@ -616,13 +616,28 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       </div>
     </div>
 
+    <!-- Import Boditrax CSV -->
+    <div class="sec-label" style="margin-top:4px">Importar CSV de Boditrax</div>
+    <div class="card card-pad card-accent-cyan card-top-cyan">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:12px;line-height:1.7">
+        App Boditrax → icono persona → Export Account Data → descarga el CSV.<br>
+        Selecciónalo aquí y todos tus scans se importan automáticamente.
+      </div>
+      <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="importBoditraxCSV(this)">
+      <button class="btn btn-ghost" style="border-color:rgba(0,212,255,.3)" onclick="document.getElementById('csv-input').click()">
+        ↑ Seleccionar CSV de Boditrax
+      </button>
+      <div id="import-result" style="margin-top:10px;font-family:var(--mono);font-size:10px;display:none;padding:10px;background:var(--bg3);border-radius:8px"></div>
+    </div>
+
     <!-- Historial scans -->
     <div class="sec-label">Historial de scans</div>
     <div id="scan-hist"></div>
 
-    <!-- Export -->
-    <div style="margin-top:10px">
-      <button class="btn btn-ghost" onclick="exportData()">↓ Exportar todo · JSON</button>
+    <!-- Export / Clear -->
+    <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn btn-ghost" onclick="exportData()">↓ Exportar JSON</button>
+      <button class="btn btn-ghost" style="color:var(--red);border-color:rgba(255,68,68,.2)" onclick="clearAllScans()">⚠ Limpiar scans</button>
     </div>
   </div>
 </div>
@@ -1541,6 +1556,127 @@ function renderProgress(){
 // ══════════════════════════════════════════════
 //  EXPORT
 // ══════════════════════════════════════════════
+// ══════════════════════════════════════════════
+//  BODITRAX CSV IMPORT
+// ══════════════════════════════════════════════
+function importBoditraxCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const scans = parseBoditraxCSV(e.target.result);
+      if (!scans.length) {
+        showImportResult('No se encontraron scans válidos en el archivo.', false);
+        return;
+      }
+      // Merge con scans existentes (no duplicar por fecha)
+      const existing = S.get('scans', []);
+      const existingDates = new Set(existing.map(s => s.date));
+      const newScans = scans.filter(s => !existingDates.has(s.date));
+      const merged = [...existing, ...newScans].sort((a, b) => a.date.localeCompare(b.date));
+      S.set('scans', merged);
+      showImportResult(
+        `✓ Importados ${newScans.length} scans nuevos (${scans.length - newScans.length} ya existían).
+Total histórico: ${merged.length} scans desde ${merged[0].date}.`,
+        true
+      );
+      renderProgress();
+      renderHome();
+      input.value = '';
+    } catch(err) {
+      showImportResult('Error al leer el archivo: ' + err.message, false);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function parseBoditraxCSV(text) {
+  const lines = text.split(/?\n/);
+  const scanMap = {};
+  let inScan = false;
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (line === 'User Scan Details') { inScan = true; continue; }
+    if (line === 'User Login Details') { inScan = false; continue; }
+    if (!inScan || line.startsWith('BodyMetricTypeId') || !line) continue;
+
+    const parts = line.split(',');
+    if (parts.length < 3) continue;
+
+    const metric = parts[0];
+    const dateStr = parts[parts.length - 1].trim();
+    const valParts = parts.slice(1, parts.length - 1);
+    const valStr = valParts.join('.');
+
+    let val;
+    try { val = parseFloat(valStr); if (isNaN(val)) continue; } catch { continue; }
+
+    // Parse date DD/M/YYYY HH:MM:SS
+    let dateKey;
+    try {
+      const m = dateStr.match(/(\d+)\/(\d+)\/(\d{4})/);
+      if (!m) continue;
+      const d = m[1].padStart(2,'0'), mo = m[2].padStart(2,'0'), y = m[3];
+      dateKey = `${y}-${mo}-${d}`;
+    } catch { continue; }
+
+    if (!scanMap[dateKey]) scanMap[dateKey] = {};
+    if (!(metric in scanMap[dateKey])) scanMap[dateKey][metric] = val;
+  }
+
+  const KEY_MAP = {
+    BodyWeight: 'peso', MuscleMass: 'musculo', FatMass: 'grasaKg',
+    WaterMass: 'agua', BoneMass: 'hueso', VisceralFatRating: 'visceral',
+    BasalMetabolicRatekJ: 'tmb_kj', MetabolicAge: 'edadMet',
+    BodyMassIndex: 'imc', BoditraxScore: 'score',
+    IntraCellularWaterMass: 'aguaIntra', ExtraCellularWaterMass: 'aguaExtra',
+    FatFreeMass: 'masaMagra', LegMuscleScore: 'legScore',
+    PhaseAngleRightArm: 'phaseAngle',
+  };
+
+  const result = [];
+  for (const date of Object.keys(scanMap).sort()) {
+    const s = scanMap[date];
+    const obj = { date };
+    for (const [csvKey, appKey] of Object.entries(KEY_MAP)) {
+      if (csvKey in s) obj[appKey] = s[csvKey];
+    }
+    if (!obj.peso) continue;
+    // Derived
+    if (obj.tmb_kj) { obj.tmb = Math.round(obj.tmb_kj / 4.184); delete obj.tmb_kj; }
+    if (obj.grasaKg && obj.peso) { obj.grasa = parseFloat((obj.grasaKg / obj.peso * 100).toFixed(1)); }
+    if (obj.agua && obj.peso) { obj.aguaPct = parseFloat((obj.agua / obj.peso * 100).toFixed(1)); }
+    // Defaults para campos requeridos por la app
+    if (!obj.grasa) obj.grasa = 0;
+    if (!obj.musculo) obj.musculo = 0;
+    if (!obj.agua) obj.agua = 0;
+    if (!obj.hueso) obj.hueso = 0;
+    if (!obj.visceral) obj.visceral = 0;
+    if (!obj.tmb) obj.tmb = 0;
+    if (!obj.edadMet) obj.edadMet = 0;
+    if (!obj.imc) obj.imc = 0;
+    result.push(obj);
+  }
+  return result;
+}
+
+function showImportResult(msg, ok) {
+  const el = document.getElementById('import-result');
+  el.style.display = 'block';
+  el.style.color = ok ? 'var(--green)' : 'var(--red)';
+  el.textContent = msg;
+}
+
+function clearAllScans() {
+  if (!confirm('¿Seguro? Se eliminarán todos los scans registrados.')) return;
+  S.set('scans', [INIT_SCAN]);
+  renderProgress();
+  renderHome();
+  showToast('Scans eliminados');
+}
+
 function exportData(){
   const data={
     exportDate:new Date().toISOString(),
