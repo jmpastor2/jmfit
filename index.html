@@ -597,17 +597,23 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <div class="chart-wrap">
       <div class="chart-title">Peso corporal</div>
       <div class="chart-sub">Histórico de scans · kg</div>
-      <canvas id="ch-peso" height="140"></canvas>
+      <div style="position:relative;width:100%;height:160px">
+        <canvas id="ch-peso"></canvas>
+      </div>
     </div>
     <div class="chart-wrap">
       <div class="chart-title">Grasa vs Músculo</div>
       <div class="chart-sub">Porcentaje de composición</div>
-      <canvas id="ch-comp" height="140"></canvas>
+      <div style="position:relative;width:100%;height:160px">
+        <canvas id="ch-comp"></canvas>
+      </div>
     </div>
     <div class="chart-wrap">
       <div class="chart-title">Fuerza · Récords por ejercicio</div>
       <div class="chart-sub">Peso máximo registrado kg</div>
-      <canvas id="ch-strength" height="140"></canvas>
+      <div style="position:relative;width:100%;height:160px">
+        <canvas id="ch-strength"></canvas>
+      </div>
     </div>
 
     <!-- Historial scans -->
@@ -1437,40 +1443,80 @@ function renderProgress(){
     </div>`;
   }).join('');
 
-  // Charts
-  const labels=scans.map(s=>s.date);
-  const chartDefaults={responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{display:false}},
-    scales:{
-      x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#55556a',font:{family:'JetBrains Mono',size:8}}},
-      y:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#55556a',font:{family:'JetBrains Mono',size:8}}}
-    }};
+  // Charts — safe init con contenedor de altura fija
+  const labels = scans.map(s => s.date);
 
-  if(_chPeso) _chPeso.destroy();
-  _chPeso=new Chart(document.getElementById('ch-peso'),{type:'line',data:{labels,
-    datasets:[{data:scans.map(s=>s.peso),borderColor:'#c8ff00',backgroundColor:'rgba(200,255,0,0.05)',
-      borderWidth:2,pointRadius:5,pointBackgroundColor:'#c8ff00',fill:true,tension:0.35}]},
-    options:chartDefaults});
+  const chartDefaults = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 400 },
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#55556a', font: { family: 'JetBrains Mono', size: 8 }, maxTicksLimit: 6 } },
+      y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#55556a', font: { family: 'JetBrains Mono', size: 8 }, maxTicksLimit: 5 } }
+    }
+  };
 
-  if(_chComp) _chComp.destroy();
-  _chComp=new Chart(document.getElementById('ch-comp'),{type:'line',data:{labels,
-    datasets:[
-      {label:'Grasa %',data:scans.map(s=>s.grasa),borderColor:'#ff6b35',backgroundColor:'rgba(255,107,53,0.05)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#ff6b35',fill:true,tension:0.35},
-      {label:'Músculo/Peso %',data:scans.map(s=>(s.musculo/s.peso*100).toFixed(1)),borderColor:'#c8ff00',backgroundColor:'rgba(200,255,0,0.05)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#c8ff00',fill:true,tension:0.35},
-    ]},
-    options:{...chartDefaults,plugins:{legend:{display:true,labels:{color:'#55556a',font:{family:'JetBrains Mono',size:8},boxWidth:8}}}}});
+  function safeChart(id, cfg) {
+    const el = document.getElementById(id);
+    if (!el) return null;
+    const existing = Chart.getChart(el);
+    if (existing) existing.destroy();
+    return new Chart(el, cfg);
+  }
 
-  // Strength chart
-  const strData=STRENGTH_KPI_EXERCISES.map(exName=>{
-    const matches=logs.filter(l=>l.ex&&l.ex.toLowerCase().includes(exName.toLowerCase().split(' ')[0]));
-    return matches.length?Math.max(...matches.map(m=>parseFloat(m.w)||0)):0;
+  // Peso
+  _chPeso = safeChart('ch-peso', {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{ data: scans.map(s => s.peso), borderColor: '#c8ff00',
+        backgroundColor: 'rgba(200,255,0,0.06)', borderWidth: 2,
+        pointRadius: scans.length === 1 ? 6 : 4, pointBackgroundColor: '#c8ff00',
+        fill: true, tension: 0.35 }]
+    },
+    options: { ...chartDefaults }
   });
-  if(_chStr) _chStr.destroy();
-  _chStr=new Chart(document.getElementById('ch-strength'),{type:'bar',
-    data:{labels:STRENGTH_KPI_EXERCISES.map(e=>e.split(' ').slice(0,2).join(' ')),
-      datasets:[{data:strData,backgroundColor:['rgba(200,255,0,0.3)','rgba(0,212,255,0.3)','rgba(0,255,136,0.3)','rgba(168,85,247,0.3)','rgba(255,107,53,0.3)'],
-        borderColor:['#c8ff00','#00d4ff','#00ff88','#a855f7','#ff6b35'],borderWidth:1,borderRadius:4}]},
-    options:{...chartDefaults,plugins:{legend:{display:false}}}});
+
+  // Composición
+  _chComp = safeChart('ch-comp', {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Grasa %', data: scans.map(s => s.grasa), borderColor: '#ff6b35',
+          backgroundColor: 'rgba(255,107,53,0.05)', borderWidth: 2,
+          pointRadius: scans.length === 1 ? 6 : 4, pointBackgroundColor: '#ff6b35',
+          fill: true, tension: 0.35 },
+        { label: 'Músculo %', data: scans.map(s => parseFloat((s.musculo / s.peso * 100).toFixed(1))),
+          borderColor: '#c8ff00', backgroundColor: 'rgba(200,255,0,0.05)', borderWidth: 2,
+          pointRadius: scans.length === 1 ? 6 : 4, pointBackgroundColor: '#c8ff00',
+          fill: true, tension: 0.35 },
+      ]
+    },
+    options: { ...chartDefaults, plugins: { legend: { display: true, labels: { color: '#55556a', font: { family: 'JetBrains Mono', size: 8 }, boxWidth: 8 } } } }
+  });
+
+  // Fuerza
+  const strLabels = STRENGTH_KPI_EXERCISES.map(e => e.split(' ').slice(0, 2).join(' '));
+  const strData = STRENGTH_KPI_EXERCISES.map(exName => {
+    const key = exName.toLowerCase().split(' ')[0];
+    const matches = logs.filter(l => l.ex && l.ex.toLowerCase().includes(key));
+    return matches.length ? Math.max(...matches.map(m => parseFloat(m.w) || 0)) : 0;
+  });
+  _chStr = safeChart('ch-strength', {
+    type: 'bar',
+    data: {
+      labels: strLabels,
+      datasets: [{
+        data: strData,
+        backgroundColor: ['rgba(200,255,0,0.25)', 'rgba(0,212,255,0.25)', 'rgba(0,255,136,0.25)', 'rgba(168,85,247,0.25)', 'rgba(255,107,53,0.25)'],
+        borderColor: ['#c8ff00', '#00d4ff', '#00ff88', '#a855f7', '#ff6b35'],
+        borderWidth: 1, borderRadius: 4
+      }]
+    },
+    options: { ...chartDefaults, plugins: { legend: { display: false } } }
+  });
 
   // Scan history
   document.getElementById('scan-hist').innerHTML=scans.slice().reverse().map((s,i,arr)=>{
