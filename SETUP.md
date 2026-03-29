@@ -1,66 +1,68 @@
-# JM · Fit v3 — Guía de configuración
+# JM · Fit v3 Multiusuario — Guía de Setup
 
-## Paso 1 — Crear proyecto en Supabase
+## ⚠️ IMPORTANTE: Nuevo schema de base de datos
 
-1. Ve a **supabase.com** → "New project"
-2. Nombre: `jmfit` · Region: West EU (Ireland) · Contraseña segura
-3. Espera ~2 minutos a que se cree
+La V3 usa un schema **completamente nuevo** con tablas adicionales.
+Si ya tenías tablas de V2, el SQL las dropea primero. Haz backup antes.
 
-## Paso 2 — Crear las tablas
+## Paso 1 — Ejecutar nuevo Schema en Supabase
 
-1. En Supabase → **SQL Editor** → "New query"
-2. Pega el contenido de `supabase_schema.sql`
-3. Pulsa **Run** → debe decir "Success"
+1. Ve a **Supabase → SQL Editor → New query**
+2. Pega el contenido de `supabase_schema_v3.sql`
+3. Pulsa **Run** → debe decir "Success. No rows returned"
 
-## Paso 3 — Obtener credenciales
+Esto crea:
+- `profiles` — perfil de cada usuario (auto-creado al registrarse)
+- `scans` — datos Boditrax por usuario
+- `workout_logs` — registro de entrenos por usuario
+- `food_items` — base de datos de alimentos **compartida** entre usuarios
+- `food_logs` — registro de comidas por usuario
+- `routines` — plantillas de rutina por usuario
 
-1. Supabase → **Settings** → **API**
-2. Copia:
-   - **Project URL**: `https://xxxxxxxxxxxx.supabase.co`
-   - **anon public key**: `eyJ...` (la larga)
+Incluye:
+- Row Level Security en todas las tablas
+- Trigger que crea perfil automáticamente al registrarse
+- Seed de 46 alimentos base (compartidos)
+- Índices para rendimiento
 
-## Paso 4 — Configurar la app
+## Paso 2 — Configurar Auth en Supabase
 
-Abre `index.html` y sustituye las 2 líneas:
+1. Ve a **Authentication → Providers**
+2. Asegúrate de que **Email** está habilitado
+3. En **Authentication → URL Configuration**:
+   - Site URL: `https://jmpastor2.github.io/jmfit/`
+   - Redirect URLs: `https://jmpastor2.github.io/jmfit/`
 
-```javascript
-// Busca esto (líneas ~570):
-const SUPABASE_URL  = 'YOUR_SUPABASE_URL';
-const SUPABASE_KEY  = 'YOUR_SUPABASE_ANON_KEY';
+## Paso 3 — Subir archivos a GitHub
 
-// Sustitúyelas por:
-const SUPABASE_URL  = 'https://xxxxxxxxxxxx.supabase.co';
-const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
-```
+Sube estos 3 archivos a `github.com/jmpastor2/jmfit`:
+- `index.html` (sobreescribe el anterior)
+- `manifest.json` (sobreescribe el anterior)
 
-## Paso 5 — Subir a GitHub
+Los iconos (`icon-192.png`, `icon-512.png`) se mantienen si ya los tienes.
 
-1. Ve a `github.com/jmpastor2/jmfit`
-2. Sube `index.html` y `manifest.json` (sobreescribe los anteriores)
-3. GitHub Pages → URL: `https://jmpastor2.github.io/jmfit/`
+## Paso 4 — Probar
 
-## Paso 6 — Crear tu cuenta en la app
+1. Abre `https://jmpastor2.github.io/jmfit/`
+2. Crea tu cuenta con tu email
+3. Confirma el email (revisa spam)
+4. Completa el wizard de onboarding (4 pasos)
+5. ¡Listo!
 
-1. Abre la app en Safari iPhone
+## Paso 5 — Añadir usuarios
+
+Cada usuario simplemente:
+1. Abre la URL de la app
 2. Pulsa "¿Sin cuenta? Regístrate"
-3. Email: `jmpastor2@alu.ucam.edu` · Contraseña de tu elección
-4. Revisa el email para confirmar (puede llegar a spam)
-5. Entra → ya tienes acceso con datos en la nube
+3. Completa el onboarding con su configuración personal
+4. Sus datos son independientes y privados (RLS)
 
-## Paso 7 — Importar histórico Boditrax
+## Funcionalidades nuevas en V3
 
-1. En la app → Progreso → "Importar CSV de Boditrax"
-2. Selecciona `BoditraxAccount_*.csv`
-3. Se importan tus 20 scans históricos automáticamente
-
-## Funcionamiento offline
-
-- Si no hay conexión → datos en localStorage
-- Cuando vuelve la conexión → sync automático con Supabase
-- El dot verde/rojo en el dashboard indica estado de sync
-
-## Seguridad
-
-- Row Level Security activo: nadie puede ver tus datos
-- Las claves `anon` son seguras para el frontend
-- Nunca compartas la `service_role` key
+- **Registro multiusuario** con email/contraseña
+- **Onboarding wizard** de 4 pasos (datos, objetivo, influencers, macros)
+- **Perfil personalizado** por usuario (objetivo, split, macros, influencers)
+- **Base de datos de alimentos compartida** — cualquier usuario puede añadir platos
+- **Macros personalizados** por usuario (no hardcoded)
+- **Diseño nuevo** — Plasma Dark theme (emerald-mint + violet + coral)
+- **Settings** — ver y reconfigurar perfil
