@@ -10,281 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <title>JM · Fit v3</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<style>
-/* ═══════════════════════════════════════════════ */
-/*  JM FIT V3 — PLASMA DARK THEME                */
-/* ═══════════════════════════════════════════════ */
-:root {
-  --bg:      #0a0b0f;
-  --bg2:     #101218;
-  --bg3:     #161a24;
-  --card:    #12141c;
-  --card2:   #1a1d28;
-  --border:  rgba(255,255,255,0.05);
-  --border2: rgba(255,255,255,0.1);
-  --acc1:    #00e5a0;  /* emerald-mint primary */
-  --acc1b:   #00c88a;
-  --acc2:    #6c5ce7;  /* electric violet */
-  --acc2b:   #a29bfe;
-  --acc3:    #fd7272;  /* coral */
-  --acc4:    #fdcb6e;  /* amber */
-  --acc5:    #74b9ff;  /* sky */
-  --text:    #e8eaf0;
-  --text2:   #c0c4d0;
-  --muted:   #5a5f78;
-  --muted2:  #2e3244;
-  --white:   #ffffff;
-  --mono: 'Space Mono', monospace;
-  --sans: 'Outfit', sans-serif;
-  --r:  16px;
-  --r2: 12px;
-  --r3: 8px;
-}
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html{background:var(--bg);scroll-behavior:smooth}
-body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100dvh;max-width:430px;margin:0 auto;overflow-x:hidden;padding-bottom:84px}
-::-webkit-scrollbar{width:0}
-input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
-input:-webkit-autofill{-webkit-box-shadow:0 0 0 30px var(--bg3) inset!important;-webkit-text-fill-color:var(--text)!important}
-
-/* ── TOAST ── */
-.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);font-family:var(--mono);font-size:11px;padding:10px 20px;background:var(--card2);border:1px solid var(--border2);border-radius:var(--r);z-index:999;transition:transform .3s cubic-bezier(.4,0,.2,1);color:var(--acc1);letter-spacing:.04em}
-.toast.show{transform:translateX(-50%) translateY(0)}
-
-/* ── NAV ── */
-.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(10,11,15,0.96);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;z-index:100;padding:0 4px;padding-bottom:env(safe-area-inset-bottom)}
-.nb{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 2px 6px;border:none;background:none;cursor:pointer;color:var(--muted);font-family:var(--sans);font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;transition:color .2s}
-.nb.active{color:var(--acc1)}
-.nb .ni{font-size:18px;line-height:1;transition:transform .15s}
-.nb.active .ni{transform:scale(1.15)}
-
-/* ── SCREENS ── */
-.screen{display:none;min-height:100dvh}
-.screen.active{display:block}
-
-/* ── LOGIN ── */
-.login-wrap{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;position:relative;overflow:hidden}
-.login-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 30% 20%,rgba(0,229,160,.06) 0%,transparent 50%),radial-gradient(ellipse at 70% 80%,rgba(108,92,231,.06) 0%,transparent 50%);pointer-events:none}
-.login-logo{font-size:48px;font-weight:900;letter-spacing:-3px;position:relative;z-index:1}
-.login-logo em{color:var(--acc1);font-style:normal}
-.login-sub{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.25em;text-transform:uppercase;margin-top:4px;margin-bottom:36px;position:relative;z-index:1}
-.login-card{width:100%;max-width:340px;background:var(--card);border:1px solid var(--border2);border-radius:var(--r);padding:28px 22px;position:relative;z-index:1}
-.login-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--acc1),var(--acc2));border-radius:var(--r) var(--r) 0 0}
-.login-err{font-family:var(--mono);font-size:10px;color:var(--acc3);padding:8px 10px;background:rgba(253,114,114,.06);border:1px solid rgba(253,114,114,.15);border-radius:var(--r3);margin-bottom:12px;display:none}
-
-/* ── ONBOARDING ── */
-.onboard-wrap{min-height:100dvh;padding:60px 24px 100px;position:relative}
-.onboard-progress{height:3px;background:var(--muted2);border-radius:2px;margin-bottom:32px;overflow:hidden}
-.onboard-fill{height:100%;background:linear-gradient(90deg,var(--acc1),var(--acc2));transition:width .4s ease;border-radius:2px}
-.onboard-step{display:none}
-.onboard-step.active{display:block;animation:fadeUp .35s ease}
-.onboard-title{font-size:26px;font-weight:800;letter-spacing:-1px;margin-bottom:8px}
-.onboard-sub{font-size:14px;color:var(--text2);margin-bottom:28px;line-height:1.6}
-.chip-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
-.chip{padding:10px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;color:var(--text2)}
-.chip.selected{background:rgba(0,229,160,.12);border-color:var(--acc1);color:var(--acc1)}
-
-/* ── FORM INPUTS ── */
-.form-group{margin-bottom:16px}
-.form-lbl{display:block;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;margin-bottom:6px}
-.form-input{width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);color:var(--text);font-family:var(--sans);font-size:14px;outline:none;transition:border-color .2s}
-.form-input:focus{border-color:var(--acc1)}
-.form-input::placeholder{color:var(--muted)}
-
-/* ── BUTTONS ── */
-.btn{width:100%;padding:14px;border:none;border-radius:var(--r2);font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.02em}
-.btn-primary{background:var(--acc1);color:var(--bg)}
-.btn-primary:active{transform:scale(.97);background:var(--acc1b)}
-.btn-secondary{background:var(--acc2);color:var(--white)}
-.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2)}
-.btn-ghost:active{background:var(--bg3)}
-.btn-danger{background:rgba(253,114,114,.1);color:var(--acc3);border:1px solid rgba(253,114,114,.2)}
-.btn-sm{padding:10px 14px;font-size:12px}
-.btn-link{background:none;border:none;color:var(--acc1);font-family:var(--mono);font-size:11px;cursor:pointer;padding:4px 0;letter-spacing:.05em}
-
-/* ── HEADER ── */
-.hdr{padding:52px 20px 18px;position:relative;overflow:hidden}
-.hdr::after{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,160,.04) 0%,transparent 70%);pointer-events:none}
-.hdr-sup{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase;margin-bottom:3px}
-.hdr-title{font-size:28px;font-weight:800;line-height:1.1;letter-spacing:-1px}
-.hdr-title em{color:var(--acc1);font-style:normal}
-.hdr-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:5px;display:flex;align-items:center;gap:8px}
-.sync-dot{width:6px;height:6px;border-radius:50%;display:inline-block}
-.sync-ok{background:var(--acc1)}
-.sync-err{background:var(--acc3)}
-
-/* ── SECTION ── */
-.sec{padding:14px 20px}
-.sec-label{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.22em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
-.sec-label::after{content:'';flex:1;height:1px;background:var(--border)}
-.divider{height:1px;background:var(--border);margin:0 20px}
-
-/* ── WEEK DOTS ── */
-.wd-row{display:flex;gap:6px;margin:12px 20px 0}
-.wd{flex:1;height:4px;border-radius:2px;background:var(--muted2);transition:background .3s}
-
-/* ── CARDS ── */
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:8px}
-.cp{padding:16px}
-.card-accent{position:relative}
-.card-accent::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
-.ca-1::before{background:linear-gradient(90deg,var(--acc1),var(--acc2))}
-.ca-2::before{background:linear-gradient(90deg,var(--acc2),var(--acc3))}
-.ca-3::before{background:linear-gradient(90deg,var(--acc5),var(--acc1))}
-.ca-4::before{background:var(--acc4)}
-.ca-5::before{background:var(--acc3)}
-
-/* ── HERO METRIC ── */
-.hero-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;position:relative;overflow:hidden}
-.hero-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--acc1),var(--acc2),var(--acc5))}
-.hero-row{display:flex;justify-content:space-between;align-items:flex-start}
-.hero-val{font-family:var(--mono);font-size:52px;font-weight:700;line-height:1;letter-spacing:-3px}
-.hero-unit{font-size:16px;color:var(--muted);margin-left:2px;font-weight:400}
-.hero-info{text-align:right}
-.hero-name{font-size:15px;font-weight:700;letter-spacing:.02em}
-.hero-meta{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px}
-.badge{display:inline-block;padding:4px 10px;border-radius:20px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-top:6px}
-.b-green{background:rgba(0,229,160,.12);color:var(--acc1);border:1px solid rgba(0,229,160,.25)}
-.b-blue{background:rgba(116,185,255,.12);color:var(--acc5);border:1px solid rgba(116,185,255,.25)}
-.b-purple{background:rgba(108,92,231,.12);color:var(--acc2b);border:1px solid rgba(108,92,231,.25)}
-.b-red{background:rgba(253,114,114,.1);color:var(--acc3);border:1px solid rgba(253,114,114,.2)}
-.b-amber{background:rgba(253,203,110,.1);color:var(--acc4);border:1px solid rgba(253,203,110,.2)}
-
-/* ── COMPOSITION BAR ── */
-.comp-bar{height:10px;border-radius:5px;display:flex;overflow:hidden;background:var(--muted2);margin:12px 0 8px}
-.comp-seg{height:100%;transition:width .5s ease}
-.comp-leg{display:flex;flex-wrap:wrap;gap:10px;font-family:var(--mono);font-size:9px;color:var(--muted)}
-.comp-dot{display:flex;align-items:center;gap:4px}
-.comp-circle{width:6px;height:6px;border-radius:50%}
-
-/* ── KPI STRIP ── */
-.kpi-scroll{display:flex;gap:8px;overflow-x:auto;padding:0 20px 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-.kpi-scroll::-webkit-scrollbar{display:none}
-.kpi-item{min-width:96px;background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:12px;flex-shrink:0}
-.kpi-name{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px}
-.kpi-val{font-family:var(--mono);font-size:22px;font-weight:700;line-height:1}
-.kpi-unit{font-size:10px;color:var(--muted);margin-left:1px;font-weight:400}
-.kpi-delta{font-family:var(--mono);font-size:9px;margin-top:4px;font-weight:700}
-.d-up{color:var(--acc1)}
-.d-down{color:var(--acc3)}
-
-/* ── METRIC CARDS ── */
-.mg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.mc{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px;position:relative;overflow:hidden}
-.mc-lbl{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
-.mc-val{font-family:var(--mono);font-size:26px;font-weight:700;line-height:1}
-.mc-val-sm{font-size:20px}
-.mc-unit{font-size:10px;color:var(--muted);margin-left:2px;font-weight:400}
-.mc-sub{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px}
-.mc-bar{height:3px;background:var(--muted2);border-radius:2px;margin-top:8px;overflow:hidden}
-.mc-fill{height:100%;border-radius:2px;transition:width .5s ease}
-.mc-delta{position:absolute;top:10px;right:10px;font-family:var(--mono);font-size:9px;font-weight:700}
-
-/* ── CHARTS ── */
-.chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin:0 20px 8px}
-.chart-title{font-size:14px;font-weight:700;margin-bottom:2px}
-.chart-sub{font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:12px}
-
-/* ── DAY CARDS ── */
-.day-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:6px;overflow:hidden}
-.day-card.today{border-color:rgba(0,229,160,.2)}
-.day-hdr{padding:14px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
-.day-name{font-size:14px;font-weight:700}
-.day-type{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;padding:3px 8px;border-radius:4px}
-.t-push{background:rgba(0,229,160,.1);color:var(--acc1)}
-.t-pull{background:rgba(108,92,231,.1);color:var(--acc2b)}
-.t-legs{background:rgba(253,114,114,.1);color:var(--acc3)}
-.t-upper{background:rgba(116,185,255,.1);color:var(--acc5)}
-.t-arms{background:rgba(253,203,110,.1);color:var(--acc4)}
-.t-rest{background:rgba(90,95,120,.1);color:var(--muted)}
-.t-custom{background:rgba(0,229,160,.1);color:var(--acc1)}
-.day-body{max-height:0;overflow:hidden;transition:max-height .35s ease}
-.day-body.open{max-height:2000px}
-.ex-row{display:flex;align-items:center;gap:8px;padding:8px 16px;border-top:1px solid var(--border)}
-.ex-n{font-family:var(--mono);font-size:10px;color:var(--muted);min-width:16px}
-.ex-name{flex:1;font-size:13px;font-weight:500}
-.ex-star{color:var(--acc4);font-size:12px}
-.ex-sets{font-family:var(--mono);font-size:10px;color:var(--acc1)}
-.ex-yt{text-decoration:none;font-size:11px;color:var(--acc2b);padding:2px 6px;border-radius:4px;background:rgba(108,92,231,.08)}
-.ex-cue{padding:2px 16px 8px 40px;font-size:11px;color:var(--muted);line-height:1.5}
-
-/* ── ATHLETE CARDS ── */
-.ath-scroll{display:flex;gap:10px;overflow-x:auto;padding:0 20px 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-.ath-scroll::-webkit-scrollbar{display:none}
-.ath-card{min-width:180px;background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px;flex-shrink:0;cursor:pointer;transition:border-color .2s}
-.ath-card:active{border-color:var(--acc1)}
-.ath-dot{width:8px;height:8px;border-radius:50%;margin-bottom:8px}
-.ath-name{font-size:13px;font-weight:700}
-.ath-title{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.08em;margin-top:2px;margin-bottom:6px}
-
-/* ── TODAY BANNER ── */
-.tb{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin:0 20px 12px;position:relative;overflow:hidden}
-.tb::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--acc1),var(--acc2))}
-.tb-label{font-family:var(--mono);font-size:9px;color:var(--acc1);letter-spacing:.15em;text-transform:uppercase;margin-bottom:4px}
-.tb-title{font-size:16px;font-weight:700;margin-bottom:4px}
-.tb-sub{font-size:12px;color:var(--text2);line-height:1.5}
-
-/* ── DIET ── */
-.macro-ring{display:flex;justify-content:space-around;padding:12px 0}
-.mr{text-align:center}
-.mr-val{font-family:var(--mono);font-size:20px;font-weight:700}
-.mr-lbl{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:2px}
-.mr-bar{width:60px;height:3px;background:var(--muted2);border-radius:2px;margin:6px auto 0;overflow:hidden}
-.mr-fill{height:100%;border-radius:2px;transition:width .4s ease}
-.meal-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:6px;overflow:hidden}
-.meal-hdr{padding:12px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
-.meal-name{font-size:13px;font-weight:600}
-.meal-kcal{font-family:var(--mono);font-size:12px;color:var(--acc1)}
-.meal-body{max-height:0;overflow:hidden;transition:max-height .3s ease}
-.meal-body.open{max-height:500px}
-.food-row{display:flex;justify-content:space-between;align-items:center;padding:6px 16px;border-top:1px solid var(--border)}
-.food-name{font-size:12px;flex:1}
-.fp{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:4px;margin-left:4px}
-.fp-p{background:rgba(0,229,160,.08);color:var(--acc1)}
-.fp-c{background:rgba(253,203,110,.08);color:var(--acc4)}
-.fp-f{background:rgba(108,92,231,.08);color:var(--acc2b)}
-.food-search-wrap{position:relative}
-.food-results{position:absolute;top:100%;left:0;right:0;background:var(--card2);border:1px solid var(--border2);border-radius:0 0 var(--r2) var(--r2);max-height:200px;overflow-y:auto;z-index:10;display:none}
-.fri{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s}
-.fri:active{background:var(--bg3)}
-.fri-name{font-size:12px;font-weight:600}
-.fri-m{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px}
-
-/* ── LOG ── */
-.log-form{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.fr{display:flex;flex-direction:column}
-.fr-full{grid-column:1/-1}
-.ci-group{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
-.ci-btn{padding:7px 12px;border-radius:var(--r3);border:1px solid var(--border);background:var(--bg3);font-size:11px;color:var(--text2);cursor:pointer;transition:all .15s}
-.ci-btn.selected{border-color:var(--acc1);background:rgba(0,229,160,.1);color:var(--acc1)}
-
-/* ── HISTORY ── */
-.hist-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
-.hist-date{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px}
-.hist-val{font-family:var(--mono);font-size:16px;font-weight:700}
-.hd-pos{font-family:var(--mono);font-size:10px;color:var(--acc1);font-weight:700}
-.hd-neg{font-family:var(--mono);font-size:10px;color:var(--acc3);font-weight:700}
-
-/* ── SETTINGS ── */
-.setting-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--border)}
-.setting-lbl{font-size:14px;font-weight:500}
-.setting-val{font-family:var(--mono);font-size:13px;color:var(--muted)}
-
-/* ── MODAL ── */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:flex-end;justify-content:center;padding:0}
-.modal-overlay.open{display:flex}
-.modal{width:100%;max-width:430px;max-height:85dvh;background:var(--card);border-radius:var(--r) var(--r) 0 0;padding:20px;overflow-y:auto;animation:slideUp .3s ease}
-.modal-handle{width:36px;height:4px;background:var(--muted2);border-radius:2px;margin:0 auto 16px}
-.modal-title{font-size:18px;font-weight:800;margin-bottom:14px}
-@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-
-/* ── LOGOUT ── */
-.user-bar{display:flex;justify-content:space-between;align-items:center;padding:8px 20px;background:var(--bg2);border-bottom:1px solid var(--border)}
-.user-name{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.08em}
-.logout-btn{background:none;border:none;font-family:var(--mono);font-size:10px;color:var(--muted);cursor:pointer;padding:4px 8px;letter-spacing:.06em}
-.logout-btn:active{color:var(--acc3)}
-</style>
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
@@ -647,6 +373,9 @@ input:-webkit-autofill{-webkit-box-shadow:0 0 0 30px var(--bg3) inset!important;
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<!-- App logic is fully inline below -->
+
 <script>
 // ══════════════════════════════════════════════
 //  SUPABASE CONFIG
@@ -994,6 +723,24 @@ async function resetOnboard() {
   await sb.from('profiles').update({ onboarded: false }).eq('id', currentUser.id);
   userProfile.onboarded = false;
   showOnboarding();
+  const goalRevMap = { 'muscle_gain':'Ganar músculo','glute_focus':'Glúteos y tren inferior','strength':'Fuerza','recomp':'Recomposición','cut':'Definición / corte','general':'Fitness general' };
+  const splitRevMap = { 'push_pull_legs':'Push/Pull/Legs','upper_lower':'Upper/Lower','full_body':'Full Body','bro_split':'Bro Split' };
+  const sexRevMap = { 'M':'Hombre','F':'Mujer','O':'Otro' };
+  setTimeout(() => {
+    if (userProfile.display_name) document.getElementById('ob-name').value = userProfile.display_name;
+    if (userProfile.height_cm) document.getElementById('ob-height').value = userProfile.height_cm;
+    if (userProfile.birth_date) document.getElementById('ob-dob').value = userProfile.birth_date;
+    if (userProfile.target_kcal) document.getElementById('ob-kcal').value = userProfile.target_kcal;
+    if (userProfile.target_protein) document.getElementById('ob-p').value = userProfile.target_protein;
+    if (userProfile.target_carbs) document.getElementById('ob-c').value = userProfile.target_carbs;
+    if (userProfile.target_fat) document.getElementById('ob-f').value = userProfile.target_fat;
+    if (userProfile.goal_detail) document.getElementById('ob-goal-detail').value = userProfile.goal_detail;
+    if (userProfile.sex) document.querySelectorAll('#ob-sex .chip').forEach(c => c.classList.toggle('selected', c.textContent === sexRevMap[userProfile.sex]));
+    if (userProfile.goal) document.querySelectorAll('#ob-goal .chip').forEach(c => c.classList.toggle('selected', c.textContent === goalRevMap[userProfile.goal]));
+    if (userProfile.training_days) document.querySelectorAll('#ob-days .chip').forEach(c => c.classList.toggle('selected', c.textContent === String(userProfile.training_days)));
+    if (userProfile.training_split) document.querySelectorAll('#ob-split .chip').forEach(c => c.classList.toggle('selected', c.textContent === splitRevMap[userProfile.training_split]));
+    if (userProfile.influencers?.length) document.querySelectorAll('#ob-influencers .chip').forEach(c => c.classList.toggle('selected', userProfile.influencers.includes(c.textContent)));
+  }, 50);
 }
 
 // ══════════════════════════════════════════════
@@ -1128,46 +875,91 @@ const ATHLETES = [
    yt:'https://www.youtube.com/results?search_query=mike+israetel+hypertrophy'},
 ];
 
-// Default plan (for José / muscle gain with arm specialization)
+// Default plan (for José / muscle gain with arm specialization — CBum+Nippard+RP hybrid)
 const DEFAULT_PLAN = [
   {day:'Lunes',type:'push',label:'Pecho · Tríceps · Hombro frontal',phil:'CBum: fuerza base + pump estético',
-   ex:[{n:'Press banca con barra',s:'4×6–8',star:false,cue:'Escápulas retraídas. Barra baja al pecho.',yt:'https://www.youtube.com/results?search_query=bench+press+technique'},
-       {n:'Press inclinado mancuernas',s:'3×8–10',star:false,cue:'30–45° inclinación. Máximo estiramiento abajo.',yt:'https://www.youtube.com/results?search_query=incline+dumbbell+press'},
-       {n:'Aperturas polea baja',s:'3×10–12',star:false,cue:'Pecho grande, brazos semiflexionados.',yt:'https://www.youtube.com/results?search_query=cable+crossover+chest'},
-       {n:'Press militar barra',s:'3×8–10',star:false,cue:'Core braced. Empuja vertical.',yt:'https://www.youtube.com/results?search_query=overhead+press+technique'},
-       {n:'Fondos paralelas lastrados',s:'3×8–10',star:false,cue:'Torso inclinado. Profundidad 90°.',yt:'https://www.youtube.com/results?search_query=weighted+dips'}]},
+   ex:[
+    {n:'Press banca con barra',s:'4×6–8',star:false,cue:'Escápulas retraídas. Barra baja al pecho.',yt:'https://www.youtube.com/results?search_query=bench+press+technique',
+     alt:[{n:'Press banca mancuernas',cue:'Mayor rango de movimiento, más estabilizadores'},{n:'Press banca máquina Smith',cue:'Sin spotter disponible, muy seguro'}]},
+    {n:'Press inclinado mancuernas',s:'3×8–10',star:false,cue:'30–45° inclinación. Máximo estiramiento abajo.',yt:'https://www.youtube.com/results?search_query=incline+dumbbell+press',
+     alt:[{n:'Press inclinado barra',cue:'Más carga, igual eficacia'},{n:'Aperturas inclinado mancuernas',cue:'Foco en estiramiento pecho alto'}]},
+    {n:'Aperturas polea baja',s:'3×10–12',star:false,cue:'Pecho grande, brazos semiflexionados.',yt:'https://www.youtube.com/results?search_query=cable+crossover+chest',
+     alt:[{n:'Aperturas mancuernas banco plano',cue:'Sin polea, buena alternativa'},{n:'Pec-deck / mariposa',cue:'Aislamiento puro, tensión constante'}]},
+    {n:'Press militar barra',s:'3×8–10',star:false,cue:'Core braced. Empuja vertical.',yt:'https://www.youtube.com/results?search_query=overhead+press+technique',
+     alt:[{n:'Press Arnold mancuernas',cue:'Activa los 3 deltoides, mayor ROM'},{n:'Press mancuernas sentado',cue:'Más control, menos estrés lumbar'}]},
+    {n:'Fondos paralelas lastrados',s:'3×8–10',star:false,cue:'Torso inclinado. Profundidad 90°.',yt:'https://www.youtube.com/results?search_query=weighted+dips',
+     alt:[{n:'Fondos en banco entre sillas',cue:'Sin lastrar, accesible siempre'},{n:'Extensión tríceps polea alta',cue:'Aislamiento sin carga articular'}]}
+   ]},
   {day:'Martes',type:'pull',label:'Espalda · Bíceps',phil:'Pendlay row Nippard + volumen bíceps CBum',
-   ex:[{n:'Peso muerto convencional',s:'4×5–6',star:false,cue:'Hip hinge. Barra rozando espinillas.',yt:'https://www.youtube.com/results?search_query=deadlift+technique'},
-       {n:'Remo con barra Pendlay',s:'4×8',star:false,cue:'Torso paralelo al suelo. Barra al ombligo.',yt:'https://www.youtube.com/results?search_query=pendlay+row'},
-       {n:'Dominadas con lastre',s:'3×6–8',star:false,cue:'Deprime escápulas antes de tirar.',yt:'https://www.youtube.com/results?search_query=weighted+pull+ups'},
-       {n:'Remo en polea sentado',s:'3×10–12',star:false,cue:'Estiramiento completo. Squeeze 1s.',yt:'https://www.youtube.com/results?search_query=seated+cable+row'},
-       {n:'Curl barra recta',s:'3×8–10',star:true,cue:'Codos fijos al costado. Excéntrico lento.',yt:'https://www.youtube.com/results?search_query=barbell+curl'},
-       {n:'Curl martillo mancuernas',s:'3×10–12',star:true,cue:'Agarre neutro. Braquial y braquiorradial.',yt:'https://www.youtube.com/results?search_query=hammer+curl'}]},
+   ex:[
+    {n:'Peso muerto convencional',s:'4×5–6',star:false,cue:'Hip hinge. Barra rozando espinillas.',yt:'https://www.youtube.com/results?search_query=deadlift+technique',
+     alt:[{n:'Peso muerto sumo',cue:'Más glúteos, mejor si hay limitación de movilidad'},{n:'Rack pull desde rodillas',cue:'Menos ROM, útil para trabajar la espalda alta'}]},
+    {n:'Remo con barra Pendlay',s:'4×8',star:false,cue:'Torso paralelo al suelo. Barra al ombligo.',yt:'https://www.youtube.com/results?search_query=pendlay+row',
+     alt:[{n:'Remo barra inclinado 45°',cue:'Versión más accesible del remo'},{n:'Remo T-bar con pecho apoyado',cue:'Más estable, mismo músculo objetivo'}]},
+    {n:'Dominadas con lastre',s:'3×6–8',star:false,cue:'Deprime escápulas antes de tirar.',yt:'https://www.youtube.com/results?search_query=weighted+pull+ups',
+     alt:[{n:'Jalones en polea agarre prono',cue:'Si no puedes hacer dominadas con lastre'},{n:'Dominadas asistidas en máquina',cue:'Para progresar hacia dominadas con peso'}]},
+    {n:'Remo en polea sentado',s:'3×10–12',star:false,cue:'Estiramiento completo. Squeeze 1s.',yt:'https://www.youtube.com/results?search_query=seated+cable+row',
+     alt:[{n:'Remo mancuerna un brazo',cue:'Mayor rango, más estabilización'},{n:'Remo en máquina Hammer',cue:'Tensión constante, articulación neutra'}]},
+    {n:'Curl barra recta',s:'3×8–10',star:true,cue:'Codos fijos al costado. Excéntrico lento.',yt:'https://www.youtube.com/results?search_query=barbell+curl',
+     alt:[{n:'Curl barra EZ',cue:'Menos estrés en muñecas, igual eficacia'},{n:'Curl mancuernas alternado',cue:'Supinación completa, más ROM'}]},
+    {n:'Curl martillo mancuernas',s:'3×10–12',star:true,cue:'Agarre neutro. Braquial y braquiorradial.',yt:'https://www.youtube.com/results?search_query=hammer+curl',
+     alt:[{n:'Curl cuerda en polea baja',cue:'Tensión constante en braquial'},{n:'Curl reverso barra EZ',cue:'Trabaja braquiorradial y antebrazo'}]}
+   ]},
   {day:'Miércoles',type:'legs',label:'Piernas completo',phil:'Squat base RP + aislamiento CBum',
-   ex:[{n:'Sentadilla con barra',s:'4×6–8',star:false,cue:'Bar path vertical. Cadera bajo rodilla.',yt:'https://www.youtube.com/results?search_query=squat+technique'},
-       {n:'Prensa inclinada 45°',s:'3×10–12',star:false,cue:'Pies altos/separados para glúteo.',yt:'https://www.youtube.com/results?search_query=leg+press'},
-       {n:'Extensión cuádriceps',s:'3×12–15',star:false,cue:'Contracción máxima arriba. Excéntrico 3s.',yt:'https://www.youtube.com/results?search_query=leg+extension'},
-       {n:'Curl femoral tumbado',s:'3×10–12',star:false,cue:'Pelvis neutra. Talones a glúteos.',yt:'https://www.youtube.com/results?search_query=lying+leg+curl'},
-       {n:'Peso muerto rumano',s:'3×10',star:false,cue:'Espalda neutra. Cadera atrás.',yt:'https://www.youtube.com/results?search_query=romanian+deadlift'},
-       {n:'Gemelos',s:'4×12–15',star:false,cue:'Rango completo. 2s arriba, 2s abajo.',yt:'https://www.youtube.com/results?search_query=calf+raise'}]},
+   ex:[
+    {n:'Sentadilla con barra',s:'4×6–8',star:false,cue:'Bar path vertical. Cadera bajo rodilla.',yt:'https://www.youtube.com/results?search_query=squat+technique',
+     alt:[{n:'Hack squat en máquina',cue:'Menos estrés lumbar, foco cuádriceps'},{n:'Sentadilla frontal',cue:'Mayor activación cuádriceps y core'}]},
+    {n:'Prensa inclinada 45°',s:'3×10–12',star:false,cue:'Pies altos/separados para glúteo.',yt:'https://www.youtube.com/results?search_query=leg+press',
+     alt:[{n:'Sentadilla Goblet con mancuerna',cue:'Sin máquina, activa core'},{n:'Zancadas caminando mancuernas',cue:'Unilateral, activa glúteo y coordinación'}]},
+    {n:'Extensión cuádriceps',s:'3×12–15',star:false,cue:'Contracción máxima arriba. Excéntrico 3s.',yt:'https://www.youtube.com/results?search_query=leg+extension',
+     alt:[{n:'Step-up con mancuernas',cue:'Más funcional, activa glúteo'},{n:'Sentadilla búlgara mancuernas',cue:'Alta activación cuádriceps y glúteo'}]},
+    {n:'Curl femoral tumbado',s:'3×10–12',star:false,cue:'Pelvis neutra. Talones a glúteos.',yt:'https://www.youtube.com/results?search_query=lying+leg+curl',
+     alt:[{n:'Curl femoral sentado',cue:'Mayor tensión en el estiramiento'},{n:'Peso muerto a una pierna',cue:'Unilateral, activa glúteo y femoral'}]},
+    {n:'Peso muerto rumano',s:'3×10',star:false,cue:'Espalda neutra. Cadera atrás.',yt:'https://www.youtube.com/results?search_query=romanian+deadlift',
+     alt:[{n:'RDL mancuernas piernas rígidas',cue:'Más rango, control bilateral'},{n:'Curl nórdico',cue:'Máxima activación excéntrica del femoral'}]},
+    {n:'Gemelos de pie',s:'4×12–15',star:false,cue:'Rango completo. 2s arriba, 2s abajo.',yt:'https://www.youtube.com/results?search_query=calf+raise',
+     alt:[{n:'Gemelos sentado (sóleo)',cue:'Activa sóleo, ángulo de rodilla diferente'},{n:'Elevaciones unilaterales en escalón',cue:'Mayor ROM, sin máquina'}]}
+   ]},
   {day:'Jueves',type:'arms',label:'Hombros · Brazos ★',phil:'Sesión CBum: especialización brazos',
-   ex:[{n:'Press Arnold',s:'4×8–10',star:false,cue:'Rotación completa. Los 3 deltoides.',yt:'https://www.youtube.com/results?search_query=arnold+press'},
-       {n:'Elevaciones laterales cable',s:'4×12–15',star:false,cue:'Tensión constante. No trapecio.',yt:'https://www.youtube.com/results?search_query=cable+lateral+raise'},
-       {n:'Curl predicador EZ',s:'3×8–10',star:true,cue:'Codo en pad. Excéntrico 3s.',yt:'https://www.youtube.com/results?search_query=preacher+curl'},
-       {n:'Curl concentrado',s:'2×10–12',star:true,cue:'Supinación máxima arriba.',yt:'https://www.youtube.com/results?search_query=concentration+curl'},
-       {n:'Press francés EZ',s:'3×10',star:true,cue:'Codos fijos. Long head tríceps.',yt:'https://www.youtube.com/results?search_query=skull+crusher'},
-       {n:'Extensión polea alta',s:'3×12',star:true,cue:'Extensión completa. Lateral head.',yt:'https://www.youtube.com/results?search_query=triceps+pushdown'}]},
+   ex:[
+    {n:'Press Arnold',s:'4×8–10',star:false,cue:'Rotación completa. Los 3 deltoides.',yt:'https://www.youtube.com/results?search_query=arnold+press',
+     alt:[{n:'Press militar mancuernas sentado',cue:'Más simple, mismo reclutamiento'},{n:'Elevaciones frontales alternas',cue:'Foco en deltoides anterior'}]},
+    {n:'Elevaciones laterales cable',s:'4×12–15',star:false,cue:'Tensión constante. No trapecio.',yt:'https://www.youtube.com/results?search_query=cable+lateral+raise',
+     alt:[{n:'Elevaciones laterales mancuernas',cue:'Más accesible, buen rango'},{n:'Face pulls cuerda',cue:'Deltoides posterior + rotadores externos'}]},
+    {n:'Curl predicador EZ',s:'3×8–10',star:true,cue:'Codo en pad. Excéntrico 3s.',yt:'https://www.youtube.com/results?search_query=preacher+curl',
+     alt:[{n:'Curl banco inclinado mancuernas',cue:'Máximo estiramiento bíceps corto'},{n:'Curl bíceps en máquina',cue:'Tensión constante, muy seguro'}]},
+    {n:'Curl concentrado',s:'2×10–12',star:true,cue:'Supinación máxima arriba.',yt:'https://www.youtube.com/results?search_query=concentration+curl',
+     alt:[{n:'Curl araña (spider curl)',cue:'Alta tensión en posición acortada'},{n:'Curl polea baja banco inclinado',cue:'Tensión constante en todo el rango'}]},
+    {n:'Press francés EZ',s:'3×10',star:true,cue:'Codos fijos. Long head tríceps.',yt:'https://www.youtube.com/results?search_query=skull+crusher',
+     alt:[{n:'Extensión overhead mancuerna',cue:'Long head — máxima activación'},{n:'Press francés mancuernas',cue:'Más ROM, menos estrés en codo'}]},
+    {n:'Extensión polea alta',s:'3×12',star:true,cue:'Extensión completa. Lateral head.',yt:'https://www.youtube.com/results?search_query=triceps+pushdown',
+     alt:[{n:'Extensión cuerda en polea',cue:'Separación final, lateral head máxima'},{n:'Fondos en banco con peso en el regazo',cue:'Sin polea, muy efectivo'}]}
+   ]},
   {day:'Viernes',type:'upper',label:'Full Upper · Consolidación',phil:'Técnica fina + 3ª frecuencia brazos',
-   ex:[{n:'Press banca agarre cerrado',s:'4×6–8',star:false,cue:'Manos anchura hombros. Tríceps + pecho.',yt:'https://www.youtube.com/results?search_query=close+grip+bench'},
-       {n:'Remo mancuerna un brazo',s:'4×8–10',star:false,cue:'Rango completo. Codo al cielo.',yt:'https://www.youtube.com/results?search_query=dumbbell+row'},
-       {n:'Aperturas pec-deck',s:'3×12',star:false,cue:'Estiramiento profundo. Squeeze.',yt:'https://www.youtube.com/results?search_query=pec+deck'},
-       {n:'Superserie: Curl inclinado + Ext. overhead',s:'3×10+10',star:true,cue:'Máxima tensión en estiramiento.',yt:'https://www.youtube.com/results?search_query=superset+bicep+tricep'},
-       {n:'Plancha + Rueda abdominal',s:'3×45s+3×12',star:false,cue:'Core braced. Sin hiperextender.',yt:'https://www.youtube.com/results?search_query=ab+wheel'}]},
+   ex:[
+    {n:'Press banca agarre cerrado',s:'4×6–8',star:false,cue:'Manos anchura hombros. Tríceps + pecho.',yt:'https://www.youtube.com/results?search_query=close+grip+bench',
+     alt:[{n:'Press cerrado máquina Smith',cue:'Más controlado, fácil progresar'},{n:'Fondos lastrados agarre cerrado',cue:'Fuerza funcional tríceps + pecho'}]},
+    {n:'Remo mancuerna un brazo',s:'4×8–10',star:false,cue:'Rango completo. Codo al cielo.',yt:'https://www.youtube.com/results?search_query=dumbbell+row',
+     alt:[{n:'Remo polea unilateral',cue:'Tensión constante en todo el rango'},{n:'Remo máquina supinado',cue:'Activa bíceps al final del rango'}]},
+    {n:'Aperturas pec-deck',s:'3×12',star:false,cue:'Estiramiento profundo. Squeeze.',yt:'https://www.youtube.com/results?search_query=pec+deck',
+     alt:[{n:'Aperturas mancuernas banco plano',cue:'Sin máquina, buen estiramiento'},{n:'Polea cruzada alta',cue:'Tensión constante, foco pecho bajo'}]},
+    {n:'Superserie: Curl inclinado + Ext. overhead',s:'3×10+10',star:true,cue:'Máxima tensión en estiramiento.',yt:'https://www.youtube.com/results?search_query=superset+bicep+tricep',
+     alt:[{n:'Superserie: Curl araña + Press francés',cue:'Sin banco inclinado disponible'},{n:'Superserie: Curl polea baja + Ext. cuerda',cue:'En polea, tensión constante en ambos'}]},
+    {n:'Plancha + Rueda abdominal',s:'3×45s+3×12',star:false,cue:'Core braced. Sin hiperextender.',yt:'https://www.youtube.com/results?search_query=ab+wheel',
+     alt:[{n:'Hollow body hold',cue:'Alta activación TVA, más exigente'},{n:'Dragon flag excéntrico',cue:'Nivel avanzado, máxima activación core'}]}
+   ]},
   {day:'Sábado',type:'rest',label:'Descanso activo',phil:'Recuperación → Adaptación',
-   ex:[{n:'Movilidad articular',s:'15–20 min',star:false,cue:'Cadera, hombros, cadena posterior.',yt:'https://www.youtube.com/results?search_query=mobility+routine'},
-       {n:'Caminata zona 2',s:'30–45 min',star:false,cue:'FC 55–65% máx.',yt:'https://www.youtube.com/results?search_query=zone+2+cardio'}]},
+   ex:[
+    {n:'Movilidad articular',s:'15–20 min',star:false,cue:'Cadera, hombros, cadena posterior.',yt:'https://www.youtube.com/results?search_query=mobility+routine',
+     alt:[{n:'Yoga restaurativo',cue:'Más relajante, mismo beneficio'},{n:'Stretching estático 30s/posición',cue:'Básico y muy efectivo'}]},
+    {n:'Caminata zona 2',s:'30–45 min',star:false,cue:'FC 55–65% máx.',yt:'https://www.youtube.com/results?search_query=zone+2+cardio',
+     alt:[{n:'Bicicleta estática baja intensidad',cue:'Sin impacto articular'},{n:'Natación suave',cue:'Recuperación activa de alta calidad'}]}
+   ]},
   {day:'Domingo',type:'rest',label:'Descanso total',phil:'El músculo crece fuera del gym',
-   ex:[{n:'Sueño 7.5–9 horas',s:'Obligatorio',star:false,cue:'GH peak durante sueño profundo.',yt:'https://www.youtube.com/results?search_query=sleep+recovery'}]},
+   ex:[
+    {n:'Sueño 7.5–9 horas',s:'Obligatorio',star:false,cue:'GH peak durante sueño profundo.',yt:'https://www.youtube.com/results?search_query=sleep+recovery',
+     alt:[{n:'Siesta 20 min si hay deuda de sueño',cue:'No más de 30 min para no afectar el sueño nocturno'}]}
+   ]},
 ];
 
 function renderWorkout() {
@@ -1209,6 +1001,7 @@ function renderWorkout() {
             <span class="ex-name">${ex.n}</span>
             ${ex.star?'<span class="ex-star">★</span>':''}
             <span class="ex-sets">${ex.s}</span>
+            ${ex.alt?.length?`<span onclick="showAlternatives(${i},${j})" style="font-size:8px;color:var(--acc4);cursor:pointer;font-family:var(--mono);padding:2px 5px;border:1px solid var(--acc4);border-radius:3px;opacity:.8;flex-shrink:0">⟳Alt</span>`:''}
             <a class="ex-yt" href="${ex.yt}" target="_blank">▶</a>
           </div>
           <div class="ex-cue">${ex.cue}</div>`).join('')}
@@ -1226,6 +1019,19 @@ function showAthlete(i) {
     <div style="font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px">Principios clave</div>
     ${a.keys.map(k => `<div style="padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:12px;margin-bottom:6px;border-left:2px solid ${a.color}">→ ${k}</div>`).join('')}
     <a href="${a.yt}" target="_blank" class="btn btn-ghost btn-sm" style="display:block;text-align:center;margin-top:14px;text-decoration:none">▶ Ver en YouTube</a>`);
+}
+
+function showAlternatives(dayIdx, exIdx) {
+  const ex = DEFAULT_PLAN[dayIdx].ex[exIdx];
+  if (!ex.alt?.length) return;
+  openModal('Alternativas · ' + ex.n, `
+    <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-bottom:12px;letter-spacing:.08em">Elige si no está la máquina o quieres variar el estímulo</div>
+    ${ex.alt.map(a => `
+      <div style="padding:10px 12px;background:var(--bg3);border-radius:8px;margin-bottom:8px;border-left:2px solid var(--acc4)">
+        <div style="font-size:13px;font-weight:700">${a.n}</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px">${a.cue}</div>
+      </div>`).join('')}
+  `);
 }
 
 // ══════════════════════════════════════════════
@@ -1323,8 +1129,11 @@ async function removeFood(id, idx) {
 }
 
 async function clearFood() {
-  LS.set('foodlog', { date: today(), items: [] });
-  // TODO: delete all food_logs for today from supabase
+  const td = today();
+  LS.set('foodlog', { date: td, items: [] });
+  if (currentUser) {
+    await sb.from('food_logs').delete().eq('user_id', currentUser.id).eq('log_date', td);
+  }
   updateDietUI();
   showToast('Día reseteado');
 }
