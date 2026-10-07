@@ -12,9 +12,31 @@ import { STRENGTH_STANDARDS, strengthLevel } from './standards'
 import verified from './videos.verified.json'
 
 describe('exercise catalog', () => {
-  it('has between 110 and 140 exercises', () => {
-    expect(EXERCISES.length).toBeGreaterThanOrEqual(110)
-    expect(EXERCISES.length).toBeLessThanOrEqual(140)
+  it('has between 140 and 180 exercises', () => {
+    expect(EXERCISES.length).toBeGreaterThanOrEqual(140)
+    expect(EXERCISES.length).toBeLessThanOrEqual(180)
+  })
+
+  it('gives every trend exercise a source, a reason and a video', () => {
+    const trends = EXERCISES.filter((e) => e.trend)
+    expect(trends.length).toBeGreaterThanOrEqual(30)
+    for (const e of trends) {
+      expect(e.trend!.by.trim(), e.id).not.toBe('')
+      expect(e.trend!.why.trim(), e.id).not.toBe('')
+      expect(e.videos.length, e.id).toBeGreaterThan(0)
+    }
+  })
+
+  it('includes the cross-body lat pull-around and finds it by its gym names', () => {
+    const e = exerciseById('cable-lat-pull-around')
+    expect(e?.trend?.by).toMatch(/Nippard/)
+    expect(e?.equipment).toBe('cable')
+    expect(e?.primary).toContain('back')
+    for (const q of ['lat pull-around', 'jalon cruzado', 'pull around'])
+      expect(
+        searchExercises(q).map((x) => x.id),
+        q,
+      ).toContain('cable-lat-pull-around')
   })
 
   it('has unique kebab-case ids', () => {

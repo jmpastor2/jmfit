@@ -1,4 +1,4 @@
-// Generated from videos.verified.json: YouTube ids verified via oEmbed on 2026-10-07.
+// Generated from videos.verified.json: YouTube ids verified via oEmbed (dates in the JSON).
 // Title and channel are exactly what oEmbed returned. Spanish first.
 import type { ExerciseVideo } from '@/domain/types'
 
@@ -144,6 +144,12 @@ export const EXERCISE_VIDEOS: Record<string, ExerciseVideo[]> = {
       youtubeId: '8urE8Z8AMQ4',
       title: 'Smith Machine Incline Press',
       channel: 'Renaissance Periodization',
+      lang: 'en',
+    },
+    {
+      youtubeId: 'fGm-ef-4PVk',
+      title: 'The Best And Worst Chest Exercises (Ranked By Science)',
+      channel: 'Jeff Nippard',
       lang: 'en',
     },
   ],
@@ -707,6 +713,12 @@ export const EXERCISE_VIDEOS: Record<string, ExerciseVideo[]> = {
       channel: 'Sergio Tejeda',
       lang: 'es',
     },
+    {
+      youtubeId: 'GNO4OtYoCYk',
+      title: 'The Best And Worst Biceps Exercises',
+      channel: 'Jeff Nippard',
+      lang: 'en',
+    },
   ],
   'skull-crusher': [
     {
@@ -897,6 +909,12 @@ export const EXERCISE_VIDEOS: Record<string, ExerciseVideo[]> = {
       channel: 'Renaissance Periodization',
       lang: 'en',
     },
+    {
+      youtubeId: 'vgR9WTxIZTk',
+      title: 'Should You Lean Forward for Seated Leg Curls? With Hypertrophy Coach',
+      channel: 'Hypertrophy Coach',
+      lang: 'en',
+    },
   ],
   'romanian-deadlift': [
     {
@@ -1072,6 +1090,484 @@ export const EXERCISE_VIDEOS: Record<string, ExerciseVideo[]> = {
       youtubeId: '4zWu1yuJ0_g',
       title: 'Correct Rowing Machine Technique, Improve Your Rowing  | Concept2',
       channel: 'concept2usa',
+      lang: 'en',
+    },
+  ],
+  'cable-lat-pull-around': [
+    {
+      youtubeId: 'tqLrIh0lINU',
+      title: 'Jalón unilateral CRUZADO',
+      channel: 'Entrena con LadyKiller®️',
+      lang: 'es',
+    },
+    {
+      youtubeId: '4xHF_pMbEsk',
+      title: 'How To: ½ Kneeling Cable Cross Body Lat Pull Around',
+      channel: 'Live Lean TV Daily Exercises',
+      lang: 'en',
+    },
+    {
+      youtubeId: 'jLvqKgW-_G8',
+      title: 'The Best And Worst Back Exercises (Ranked By Science)',
+      channel: 'Jeff Nippard',
+      lang: 'en',
+      start: 278,
+    },
+  ],
+  'half-kneeling-single-arm-pulldown': [
+    {
+      youtubeId: '1hoM0hcSszc',
+      title: 'JALÓN UNILATERAL de RODILLAS en POLEA',
+      channel: 'POWER HIIT FITNESS COACHING',
+      lang: 'es',
+    },
+    {
+      youtubeId: 'jLvqKgW-_G8',
+      title: 'The Best And Worst Back Exercises (Ranked By Science)',
+      channel: 'Jeff Nippard',
+      lang: 'en',
+    },
+  ],
+  'lat-prayer': [
+    {
+      youtubeId: '50McGQ3MJOY',
+      title: 'Lat Prayer with Menno Henselmans',
+      channel: 'Menno Henselmans',
+      lang: 'en',
+    },
+    {
+      youtubeId: '_XxdZcR_Iyw',
+      title: 'Lat Prayer Tutorial – Build a Stronger, Wider Back',
+      channel: 'FIT.nl',
+      lang: 'en',
+    },
+  ],
+  'cable-y-raise': [
+    {
+      youtubeId: 'OXWBrhMa590',
+      title: 'ELEVACIONES LATERALES CRUZADAS en POLEA',
+      channel: 'POWER HIIT FITNESS COACHING',
+      lang: 'es',
+    },
+    {
+      youtubeId: '9D1c_EVhM-o',
+      title: 'Cable Y Raise - The Ultimate Shoulder Exercise',
+      channel: 'FormFocus',
+      lang: 'en',
+    },
+    {
+      youtubeId: 'SgyUoY0IZ7A',
+      title: 'The Best And Worst Shoulder Exercises',
+      channel: 'Jeff Nippard',
+      lang: 'en',
+    },
+  ],
+  'behind-back-cable-lateral-raise': [
+    {
+      youtubeId: 'jM8p44gwFPw',
+      title: '¡Los ÚNICOS 2 ejercicios que hicieron crecer mis hombros estrechos 💪🏼🔥',
+      channel: 'Jeremy Ethier en Español',
+      lang: 'es',
+    },
+    {
+      youtubeId: 'ozpcrgmwyto',
+      title: 'The ONLY 2 Exercises You Need For Wide Shoulders',
+      channel: 'Jeremy Ethier',
+      lang: 'en',
+    },
+    {
+      youtubeId: 'SgyUoY0IZ7A',
+      title: 'The Best And Worst Shoulder Exercises',
+      channel: 'Jeff Nippard',
+      lang: 'en',
+    },
+  ],
+  'super-rom-lateral-raise': [
+    { youtubeId: 'C666hpsFvJY', title: 'Elevaciones Lu', channel: 'Víctor Sánchez', lang: 'es' },
+    {
+      youtubeId: 'O9oicEA7aPU',
+      title: 'Do Lu Raises For Bigger Shoulders',
+      channel: 'FitnessFAQs',
+      lang: 'en',
+    },
+    {
+      youtubeId: 'WksbcaxSp2c',
+      title: 'Everyone Trains Traps WRONG (5 BETTER Trap Exercises)',
+      channel: 'Renaissance Periodization',
+      lang: 'en',
+    },
+  ],
+  'side-lying-incline-lateral-raise': [
+    {
+      youtubeId: '-znJNdPnaOo',
+      title: 'Exercise Index - Lying Side Raise',
+      channel: 'mountaindog1',
+      lang: 'en',
+    },
+    {
+      youtubeId: 'SgyUoY0IZ7A',
+      title: 'The Best And Worst Shoulder Exercises',
+      channel: 'Jeff Nippard',
+      lang: 'en',
+    },
+  ],
+  'lean-in-lateral-raise': [
+    {
+      youtubeId: 'jM8p44gwFPw',
+      title: '¡Los ÚNICOS 2 ejercicios que hicieron crecer mis hombros estrechos 💪🏼🔥',
+      channel: 'Jeremy Ethier en Español',
+      lang: 'es',
+    },
+    {
+      youtubeId: 'ozpcrgmwyto',
+      title: 'The ONLY 2 Exercises You Need For Wide Shoulders',
+      channel: 'Jeremy Ethier',
+      lang: 'en',
+    },
+    {
+      youtubeId: 'SgyUoY0IZ7A',
+      title: 'The Best And Worst Shoulder Exercises',
+      channel: 'Jeff Nippard',
+      lang: 'en',
+    },
+  ],
+  'katana-triceps-extension': [
+    {
+      youtubeId: 'FCATldkFCUk',
+      title:
+        'TUTORIAL del MEJOR ejercicio de TRÍCEPS -y variantes- EXTENSIONES KATANA paso a paso - 2025',
+      channel: 'Sergio M. Coach',
+      lang: 'es',
+    },
+    {
+      youtubeId: 'OpRMRhr0Ycc',
+      title: 'The Best & Worst TRICEPS Exercises (Ranked Using Science)',
+      channel: 'Jeff Nippard',
+      lang: 'en',
+    },
+  ],
+  'smith-jm-press': [
+    {
+      youtubeId: 'b-nyTZBLpWo',
+      title: 'Domina el JM Press en Smith: Paso a Paso',
+      channel: 'Profit Tec',
+      lang: 'es',
+    },
+    {
+      youtubeId: '6oaUT4GYHkw',
+      title: 'How to: Smith Machine JM Press | BEST GUIDE & TIPS!',
+      channel: 'ATLASTHETICS',
+      lang: 'en',
+    },
+    {
+      youtubeId: 'OpRMRhr0Ycc',
+      title: 'The Best & Worst TRICEPS Exercises (Ranked Using Science)',
+      channel: 'Jeff Nippard',
+      lang: 'en',
+    },
+  ],
+  'cable-triceps-kickback': [
+    {
+      youtubeId: 'p31eAveVGk8',
+      title: 'PATADA DE TRICEPS EN POLEA I Explicación Completa I Sergio Tejeda',
+      channel: 'Sergio Tejeda',
+      lang: 'es',
+    },
+    {
+      youtubeId: 'OpRMRhr0Ycc',
+      title: 'The Best & Worst TRICEPS Exercises (Ranked Using Science)',
+      channel: 'Jeff Nippard',
+      lang: 'en',
+    },
+  ],
+  'cable-press-around': [
+    {
+      youtubeId: '8Ra0swX5-zg',
+      title: 'Press-Around Tutorial (Short Postion Pec Training)',
+      channel: 'Ben Yanes',
+      lang: 'en',
+    },
+    {
+      youtubeId: 'fGm-ef-4PVk',
+      title: 'The Best And Worst Chest Exercises (Ranked By Science)',
+      channel: 'Jeff Nippard',
+      lang: 'en',
+    },
+  ],
+  'helms-row': [
+    { youtubeId: 'F6UaTLjkLBk', title: 'REMO HELMS', channel: 'EPD Prof.Patriciodiaz', lang: 'es' },
+    {
+      youtubeId: 'axoeDmW0oAY',
+      title: 'How To Build a Thick Back With Perfect Rowing Technique (Pendlay Row/ Helms Row)',
+      channel: 'Jeff Nippard',
+      lang: 'en',
+    },
+  ],
+  'kelso-shrug': [
+    {
+      youtubeId: 'PAYCldv_IhE',
+      title: 'Encogimientos Kelso',
+      channel: 'Víctor Sánchez',
+      lang: 'es',
+    },
+    {
+      youtubeId: 'zX0c-WIIilk',
+      title: 'Dumbbell Kelso Shrugs (Chest Supported Shrugs)',
+      channel: 'The Neuro Strength Coach',
+      lang: 'en',
+    },
+  ],
+  'kroc-row': [
+    {
+      youtubeId: 'lL6fOrEPvQI',
+      title:
+        'Kroc Rows Technique - Building Upper Back Size and Strength w/ Heavy, High Rep One Arm Dumbbell Rows',
+      channel: 'Alexander Bromley',
+      lang: 'en',
+    },
+    {
+      youtubeId: 'jLvqKgW-_G8',
+      title: 'The Best And Worst Back Exercises (Ranked By Science)',
+      channel: 'Jeff Nippard',
+      lang: 'en',
+    },
+  ],
+  'seal-row': [
+    {
+      youtubeId: '3MzKh7bVoo0',
+      title: 'SEAL ROW CON MANCUERNAS',
+      channel: 'CARLOS Online Coach',
+      lang: 'es',
+    },
+    {
+      youtubeId: 'fBgDGkfT8Rc',
+      title: 'Exercise Index - Seal Rows',
+      channel: 'mountaindog1',
+      lang: 'en',
+    },
+  ],
+  'meadows-row': [
+    {
+      youtubeId: 'HAUniv35zGY',
+      title: 'REMO MEADOWS  I Explicación Completa I Sergio Tejeda',
+      channel: 'Sergio Tejeda',
+      lang: 'es',
+    },
+    {
+      youtubeId: 'G-jU1aPVhnY',
+      title: 'How to Meadows Row "The Right Way"',
+      channel: 'mountaindog1',
+      lang: 'en',
+    },
+  ],
+  'wide-grip-cable-row': [
+    {
+      youtubeId: 'nCbtqkECvFI',
+      title: 'Remo Polea Sentado Agarre Prono ABIERTO',
+      channel: 'Intenza Gym ',
+      lang: 'es',
+    },
+    {
+      youtubeId: 'jLvqKgW-_G8',
+      title: 'The Best And Worst Back Exercises (Ranked By Science)',
+      channel: 'Jeff Nippard',
+      lang: 'en',
+    },
+  ],
+  'pendulum-squat': [
+    {
+      youtubeId: 'mr9-sHJg2hE',
+      title: 'SENTADILLA PENDULAR – TÉCNICA CORRECTA, BENEFICIOS Y ERRORES COMUNES',
+      channel: 'Sergio Tejeda',
+      lang: 'es',
+    },
+    {
+      youtubeId: 'kIXcoivzGf8',
+      title: 'The Best & Worst QUAD Exercises (Ranked Using Science)',
+      channel: 'Jeff Nippard',
+      lang: 'en',
+    },
+  ],
+  'sissy-squat': [
+    {
+      youtubeId: 'IU6w5NDjNxE',
+      title: 'SISSY SQUAT o SENTADILLA SISSY sin máquina para CUÁDRICEPS | CÓMO SE HACE',
+      channel: 'APTA Vital Sport',
+      lang: 'es',
+    },
+    {
+      youtubeId: 'sMOmCcjS-Js',
+      title: 'Sissy Squats Will Transform Your Legs',
+      channel: 'FitnessFAQs',
+      lang: 'en',
+    },
+    {
+      youtubeId: 'kIXcoivzGf8',
+      title: 'The Best & Worst QUAD Exercises (Ranked Using Science)',
+      channel: 'Jeff Nippard',
+      lang: 'en',
+    },
+  ],
+  'reverse-nordic': [
+    {
+      youtubeId: 'ymYl3zpyVU0',
+      title: 'curl nórdico invertido (reverse nordic curl)',
+      channel: 'Fitness Consciente',
+      lang: 'es',
+    },
+    {
+      youtubeId: 'PvJDjcfZe1c',
+      title:
+        'How to Safely Set Up, Perform, & Program Reverse Nordics (Progressions | Regressions | Alternatives)',
+      channel: 'E3 Rehab',
+      lang: 'en',
+    },
+    {
+      youtubeId: 'kIXcoivzGf8',
+      title: 'The Best & Worst QUAD Exercises (Ranked Using Science)',
+      channel: 'Jeff Nippard',
+      lang: 'en',
+    },
+  ],
+  'nordic-curl': [
+    {
+      youtubeId: 'Vd6HJ3FsBEw',
+      title:
+        'Isquios más FUNCIONALES y sin LESIONES con este ejercicio ✅ CURL NÓRDICO – CAÍDAS NÓRDICAS',
+      channel: 'Ninolift',
+      lang: 'es',
+    },
+    {
+      youtubeId: '6NCN6kOagfY',
+      title: 'How to Do a Nordic Hamstring Curl',
+      channel: 'The Kneesovertoesguy',
+      lang: 'en',
+    },
+  ],
+  'copenhagen-plank': [
+    {
+      youtubeId: 'mv8u-RDoADM',
+      title: 'Plancha Copenhague para Aductor I Explicación Completa I Sergio Tejeda',
+      channel: 'Sergio Tejeda',
+      lang: 'es',
+    },
+    {
+      youtubeId: 'YRRnnZsRs9U',
+      title:
+        'How to Set Up, Perform, & Program Copenhagen Planks (Progressions | Regressions | Alternatives)',
+      channel: 'E3 Rehab',
+      lang: 'en',
+    },
+  ],
+  'deficit-bulgarian-split-squat': [
+    {
+      youtubeId: 'x4LnQD6I264',
+      title: 'SENTADILLA BÚLGARA CON DÉFICIT – TÉCNICA CORRECTA, BENEFICIOS Y ERRORES COMUNES',
+      channel: 'Sergio Tejeda',
+      lang: 'es',
+    },
+    {
+      youtubeId: 'cyXeMojvQ9s',
+      title: 'How to: Deficit Bulgarian Split Squat',
+      channel: 'Core Blend Training',
+      lang: 'en',
+    },
+  ],
+  'atg-split-squat': [
+    {
+      youtubeId: 'g6KrlrOq4mw',
+      title: 'Build Strength and Flexibility with This One Brutal Leg Move | Knees Over Toes Guy',
+      channel: 'Garage Strength',
+      lang: 'en',
+    },
+  ],
+  'tibialis-raise': [
+    {
+      youtubeId: 'UVh1ztx8kZI',
+      title: 'Elevaciones de tibial anterior - Técnica',
+      channel: 'Academia de Movimiento',
+      lang: 'es',
+    },
+    {
+      youtubeId: '_2RZkfw6Y1g',
+      title: 'ATG Foot, Ankle, Achilles & Shin Guide',
+      channel: 'The Kneesovertoesguy',
+      lang: 'en',
+    },
+  ],
+  'frog-pump': [
+    {
+      youtubeId: 'QZypmmBVsh0',
+      title: 'FROG PUMP 🍑Activa y Aumenta tus GLÚTEOS con este Ejercicio ✅',
+      channel: 'Ninolift',
+      lang: 'es',
+    },
+    {
+      youtubeId: 'jbJBXErKD-U',
+      title: 'How To Frog Pump',
+      channel: 'Bret Contreras Glute Guy',
+      lang: 'en',
+    },
+  ],
+  'spanish-squat': [
+    {
+      youtubeId: 'CYIds8CzGbU',
+      title: 'SENTADILLA ESPAÑOLA CON GOMA',
+      channel: 'Pau Mérida',
+      lang: 'es',
+    },
+    {
+      youtubeId: 'hgFxm5KIF7M',
+      title: "How to Set Up and Perform Spanish Squats Correctly (Don't Make This Mistake!)",
+      channel: 'E3 Rehab',
+      lang: 'en',
+    },
+  ],
+  'lying-dumbbell-curl': [
+    {
+      youtubeId: '8e5gLPyFAz4',
+      title: '💪 ¡Los ÚNICOS 2 ejercicios que necesitas para brazos gigantes! 🔥',
+      channel: 'Jeremy Ethier en Español',
+      lang: 'es',
+    },
+    {
+      youtubeId: 'WvlDMlMx1Ok',
+      title: 'The ONLY 2 Exercises You Need For Massive Arms',
+      channel: 'Jeremy Ethier',
+      lang: 'en',
+    },
+    {
+      youtubeId: 'GNO4OtYoCYk',
+      title: 'The Best And Worst Biceps Exercises',
+      channel: 'Jeff Nippard',
+      lang: 'en',
+    },
+  ],
+  'inverse-zottman-curl': [
+    {
+      youtubeId: 'LIJFwB5NwPs',
+      title: 'How To: Standing Inverse Zottman Curl',
+      channel: 'Live Lean TV Daily Exercises',
+      lang: 'en',
+    },
+    {
+      youtubeId: 'GNO4OtYoCYk',
+      title: 'The Best And Worst Biceps Exercises',
+      channel: 'Jeff Nippard',
+      lang: 'en',
+    },
+  ],
+  'b-stance-rdl': [
+    {
+      youtubeId: 'n48GjINLCe4',
+      title: 'Peso Muerto Rumano B Stance ✅ Todo lo que NECESITAS SABER',
+      channel: 'Ninolift',
+      lang: 'es',
+    },
+    {
+      youtubeId: 'SwQtQvcrz-c',
+      title: 'How To Properly B Stance RDL For More Glute Gains (Learn In 3 Minutes)',
+      channel: 'Colossus Fitness',
       lang: 'en',
     },
   ],

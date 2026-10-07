@@ -23,6 +23,7 @@ const ProgramEditorPage = named(
   'ProgramEditorPage',
 )
 const ProgressPage = named(() => import('@/features/progress/ProgressPage'), 'ProgressPage')
+const EvolutionPage = named(() => import('@/features/evolution/EvolutionPage'), 'EvolutionPage')
 const ExercisePage = named(() => import('@/features/exercise/ExercisePage'), 'ExercisePage')
 const LibraryPage = named(() => import('@/features/exercise/LibraryPage'), 'LibraryPage')
 const BodyPage = named(() => import('@/features/body/BodyPage'), 'BodyPage')
@@ -54,6 +55,7 @@ export const router = createHashRouter([
       { path: 'programs', element: page(<ProgramsPage />) },
       { path: 'programs/:programId', element: page(<ProgramEditorPage />) },
       { path: 'progress', element: page(<ProgressPage />) },
+      { path: 'evolution', element: page(<EvolutionPage />) },
       { path: 'exercise/:exerciseId', element: page(<ExercisePage />) },
       { path: 'library', element: page(<LibraryPage />) },
       { path: 'body', element: page(<BodyPage />) },

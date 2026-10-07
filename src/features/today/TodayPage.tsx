@@ -407,7 +407,7 @@ function WeekBlock({ now, weeklyTarget }: { now: Date; weeklyTarget: number }) {
   const setsDiff = w.sets - w.prevSets
   const tonDiff = w.tonnage - w.prevTonnage
   return (
-    <Block title="Esta semana" link={{ to: '/train', label: 'Historial' }}>
+    <Block title="Esta semana" link={{ to: '/evolution', label: 'Evolución' }}>
       <Kpi
         label="Sesiones"
         value={w.sessions}

@@ -14,7 +14,7 @@ export function VideoPlayer({ video }: { video: ExerciseVideo }) {
         {playing ? (
           <iframe
             className="absolute inset-0 size-full"
-            src={`https://www.youtube-nocookie.com/embed/${video.youtubeId}?autoplay=1&playsinline=1&rel=0`}
+            src={`https://www.youtube-nocookie.com/embed/${video.youtubeId}?autoplay=1&playsinline=1&rel=0${video.start ? `&start=${video.start}` : ''}`}
             title={video.title}
             allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
             allowFullScreen

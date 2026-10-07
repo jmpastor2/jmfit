@@ -58,6 +58,8 @@ export interface ExerciseVideo {
   /** Channel name, shown as the source. */
   channel: string
   lang: 'es' | 'en'
+  /** Second where the relevant part starts (long ranking videos). */
+  start?: number
 }
 
 export interface Exercise {
@@ -83,6 +85,11 @@ export interface Exercise {
   /** 2–3 frequent mistakes. */
   mistakes: string[]
   videos: ExerciseVideo[]
+  /**
+   * Modern variation popularised by a coach or creator (lat pull-around, Bayesian curl…):
+   * who made it known and why it works. Shown in the library's «Novedades» section.
+   */
+  trend?: { by: string; why: string }
 }
 
 /* ───────────── Programs ───────────── */

@@ -58,7 +58,16 @@ export function ProgressPage() {
 
   return (
     <>
-      <PageHeader large eyebrow="Tu evolución" title="Progreso" />
+      <PageHeader
+        large
+        eyebrow="Tu evolución"
+        title="Progreso"
+        action={
+          <Link to="/evolution" className="spec tap-link text-gold">
+            Historial
+          </Link>
+        }
+      />
       <Segmented<View>
         value={view}
         onChange={setView}

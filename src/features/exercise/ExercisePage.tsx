@@ -107,6 +107,13 @@ export function ExercisePage() {
         subtitle={`${muscles} · ${EQUIPMENT_LABEL[exercise.equipment]}`}
       />
 
+      {exercise.trend && (
+        <div className="-mt-1 mb-4 border-l border-gold-dark pl-3">
+          <span className="spec block text-gold">Popularizado por {exercise.trend.by}</span>
+          <p className="mt-0.5 text-[13px] leading-snug text-ink-2">{exercise.trend.why}</p>
+        </div>
+      )}
+
       <div className="flex flex-col gap-2">
         <Button
           block

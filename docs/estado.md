@@ -1,8 +1,9 @@
-# Estado (2026-10-07)
+# Estado (2026-10-08)
 
 Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su esquema en `legacy/`).
 
 ## Hecho
+
 - Migraciones aplicadas en Supabase (`jzhltzafdqipeortwdra`): forja, workout_plan, google_health,
   manual_recovery. Las 18 series del 1 sep 2026 se copiaron al modelo nuevo; los ceros falsos de
   los escáneres pasaron a null; el perfil heredó 5 días/semana e hipertrofia.
@@ -10,7 +11,14 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   biblioteca, objetivos, cuerpo (Boditrax + recuperación), gimnasio con QR, ajustes, pulsera.
 - 262 tests; build de producción limpio; revisado en el laboratorio con los datos reales.
 
+- 2026-10-08: Evolución (/evolution: resumen por periodo, línea de tiempo mensual con hitos, mapa de
+  constancia de 26 semanas, comparador de meses) y 31 ejercicios novedosos con `trend` (lat pull-around,
+  Y-raise en polea, curl bayesiano, JM press, Kelso shrug, sentadilla péndulo, nórdico inverso…), sección
+  «Novedades» en la Biblioteca; 152 ejercicios, 221 vídeos verificados; vídeos con segundo de inicio.
+- Descartado por el usuario: análisis de comida por foto con IA.
+
 ## Pendiente
+
 1. Publicar: GitHub → Settings → Pages → Source: **GitHub Actions** (una vez), y push a `main`.
 2. Google Health API: Google no admite proyectos nuevos (oct 2026). La función
    `supabase/functions/google-health` está escrita pero sin desplegar; seguir `docs/google-health.md`
