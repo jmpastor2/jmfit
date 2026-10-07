@@ -1,0 +1,326 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter/wght.css';
+@import '@fontsource/barlow-condensed/latin-500.css';
+@import '@fontsource/barlow-condensed/latin-600.css';
+@import '@fontsource/barlow-condensed/latin-700.css';
+
+/*
+ * Forja. Black and gold: a black canvas, warm white type and one gold that marks what matters
+ * (progress, records, the main action). See DESIGN.md.
+ */
+
+/* ---------- Tokens: black & gold (Forja is dark only) ---------- */
+:root {
+  --bg: #0a0a0a;
+  --halo-a: rgb(201 165 92 / 0.06);
+  --halo-b: rgb(201 165 92 / 0.02);
+  --panel: #121212;
+  --panel-2: #1a1a1a;
+  --panel-3: #242424;
+  --line: #24221f;
+  --line-strong: #3a3732;
+  --ink: #f3f0e8;
+  --ink-2: #c9c3b6;
+  --muted: #8f8a80;
+  /* Gold: the one colour that carries meaning (progress, records, the main action). */
+  --signal: #c9a55c;
+  --signal-ink: #0a0a0a;
+  --signal-soft: rgb(201 165 92 / 0.12);
+  --signal-glow: 0 0 0 transparent;
+  --gold-light: #e4c98f;
+  --gold: #c9a55c;
+  --gold-dark: #8c7140;
+  --accent: #e4c98f;
+  --accent-soft: rgb(228 201 143 / 0.1);
+  --warn: #e8705a;
+  --warn-soft: rgb(232 112 90 / 0.13);
+  --danger: #d2605a;
+  --danger-soft: rgb(210 96 90 / 0.14);
+  --ok: #9fb8c8;
+  --ok-soft: rgb(159 184 200 / 0.13);
+  --shadow: 0 18px 40px -28px rgb(0 0 0 / 1);
+  --highlight: inset 0 1px 0 rgb(255 255 255 / 0.03);
+  --radius: 10px;
+  --radius-sm: 6px;
+
+  /* Muscle groups in charts: gold first, then quiet neutrals and one cool tone. */
+  --m-push: #c9a55c;
+  --m-pull: #a9b8d6;
+  --m-legs: #c98f6b;
+  --m-arms: #efe3c6;
+  --m-core: #7f8796;
+
+  --chart-1: var(--signal);
+  --chart-2: #a9b8d6;
+  --chart-3: #c98f6b;
+  --chart-4: #efe3c6;
+  --chart-5: var(--muted);
+  color-scheme: dark;
+}
+
+/* Expose tokens to Tailwind utilities: bg-panel, text-ink, border-line, text-signal… */
+@theme inline {
+  --color-canvas: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-panel-3: var(--panel-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-signal: var(--signal);
+  --color-signal-ink: var(--signal-ink);
+  --color-signal-soft: var(--signal-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --radius-card: var(--radius);
+  --radius-control: var(--radius-sm);
+  --font-sans:
+    'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
+  /* Display: condensed capitals for titles, labels and the big numbers (kg, reps, timers). */
+  --font-display: 'Barlow Condensed', 'Arial Narrow', -apple-system, system-ui, sans-serif;
+  --font-num: 'Barlow Condensed', 'Arial Narrow', -apple-system, system-ui, sans-serif;
+  --color-gold: var(--gold);
+  --color-gold-light: var(--gold-light);
+  --color-gold-dark: var(--gold-dark);
+  --font-mono: var(--font-num);
+}
+
+/*
+ * Everything below lives in cascade layers. Unlayered rules beat every Tailwind
+ * utility regardless of specificity.
+ */
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    background: var(--bg);
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    line-height: 1.45;
+    overscroll-behavior-y: none;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Backdrop: one soft aurora at the top of the screen on a flat ground. Fixed, no repaint. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(70rem 26rem at 50% -14rem, var(--halo-a), transparent 70%),
+      radial-gradient(40rem 22rem at 100% -6rem, var(--halo-b), transparent 70%), var(--bg);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: 0.01em;
+  }
+
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  ::selection {
+    background: var(--signal-soft);
+  }
+
+  /*
+   * Keyboard focus: one themed ring for whatever does not draw its own (the controls that do
+   * set outline-none and a ring of their own). :where keeps it at zero specificity.
+   */
+  :where(
+    a,
+    button,
+    summary,
+    select,
+    [role='button'],
+    [role='tab'],
+    [role='radio'],
+    [role='switch']
+  ):focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--signal) 75%, transparent);
+    outline-offset: 2px;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+}
+
+@layer components {
+  .safe-top {
+    padding-top: max(env(safe-area-inset-top), 12px);
+  }
+  .safe-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 8px);
+  }
+
+  /* Panel: flat surface, hairline edge, soft depth only on the light theme. */
+  .card {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--highlight), var(--shadow);
+  }
+
+  /* Kept for compatibility: hero panels no longer carry corner marks. */
+  .instrument {
+    isolation: isolate;
+  }
+
+  /* Quiet label: sentence case, small, muted. Numbers and names carry the weight. */
+  /* Label: short condensed capitals with wide tracking. Sentences never use it. */
+  .spec {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Hairline gold rule under a hero title. */
+  .gold-rule {
+    height: 1px;
+    width: 32px;
+    background: var(--gold);
+  }
+
+  /*
+   * A small text link ("Ver todo", "Gestionar") keeps its look but answers a 44 px target:
+   * the box grows with padding and gives the room back with a negative margin, so nothing
+   * around it moves. Also available as .tap-link for other small controls.
+   */
+  a.spec,
+  button.spec,
+  .tap-link {
+    padding-block: 15px;
+    margin-block: -15px;
+  }
+
+  /* Readout: rounded tabular numerals, slightly tight. */
+  .readout {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.005em;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .glow {
+    box-shadow: var(--signal-glow);
+  }
+  .text-glow {
+    text-shadow: none;
+  }
+
+  .hide-scrollbar {
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fade-up {
+    animation: fade-up 0.22s ease-out both;
+  }
+  .pulse-ring {
+    animation: pulse-ring 1.8s ease-out infinite;
+  }
+  .skeleton {
+    background: var(--panel-2);
+    border-radius: 10px;
+    animation: pulse-soft 1.4s ease-in-out infinite;
+  }
+}
+
+/* Cards fade in where they stand: rising a few pixels made every screen seem to jump as
+   its data arrived. */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--warn) 55%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* Reduced motion wins over any layer on purpose. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* iOS zooms the whole page into any field set below 16 px and leaves it zoomed: every sheet
+   with a field jumped around while typing. Unlayered on purpose, so it wins over utilities. */
+@media (pointer: coarse) {
+  /* Bigger fields (the session steppers) are already above the threshold: data-big keeps their size. */
+  input:not([type='checkbox'], [type='radio'], [type='range'], [data-big]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Inside a sheet the content arrives with the sheet: a card that also rose 6 px on its own
+   made the sheet look as if it jumped once it had landed. */
+dialog .fade-up {
+  animation: none;
+}

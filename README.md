@@ -1,57 +1,32 @@
-# JM · Fit v2 — Panel élite personal
+# Forja
 
-App PWA de alto rendimiento. Todo en local, cero coste, instalable en iPhone como app nativa.
+Entrenamiento guiado para el gimnasio: qué toca hoy, con qué peso, cuánto descansar, cuándo bates
+un récord y cómo cambia tu cuerpo. PWA instalable (GitHub Pages) sobre Supabase.
 
-## Nuevo en v2
+- **Sesión guiada:** peso y reps recomendados por serie (doble progresión con RIR), ajuste de la
+  serie siguiente según cómo fue la anterior, calentamientos, discos por lado, descanso automático
+  con aviso, récords en directo y superseries. Funciona sin conexión.
+- **Programas:** 8 plantillas (incluida la tuya PPL + Brazos) y editor con el volumen semanal por
+  músculo frente a los rangos de Renaissance Periodization; mesociclos con semana de descarga.
+- **Progreso:** 1RM estimado, nivel de fuerza relativo a tu peso, series efectivas por músculo,
+  tonelaje, frecuencia y tabla de récords.
+- **Cuerpo:** escáneres Boditrax (alta manual o CSV), evolución, comparador; recuperación
+  (sueño, FC en reposo, HRV, pasos) y preparación diaria.
+- **Técnica:** 121 ejercicios con claves y errores, 147 vídeos verificados.
+- **Mi gimnasio:** tus máquinas de Fitness Park con sus ajustes y un QR imprimible por máquina.
+- **Objetivos** con proyección de fecha.
 
-- **Dieta personalizada** con plan completo día entrenamiento + día descanso
-- **Base de datos de 45+ alimentos** con calculadora de macros por gramos
-- **Log de macros diario** con tracking en tiempo real vs objetivo
-- **KPI strip** en dashboard: peso, grasa, músculo, 1RM estimado, ratio M/G
-- **Atletas de referencia**: CBum, Jeff Nippard, Mike Israetel con sus principios
-- **Links a YouTube** por ejercicio (técnica + vídeos de referencia)
-- **Cues técnicos** por ejercicio debajo de cada uno
-- **Check-in pre-sesión**: estado, sueño, energía, estrés
-- **KPIs de fuerza**: máximos registrados + 1RM estimado (fórmula Epley)
-- **3 gráficas de progreso**: peso, composición, récords de fuerza
-- **Exportación JSON** completa con scans + logs + comidas
+## Desarrollo
 
-## Deploy en GitHub Pages (5 min)
-
-### 1. Crea el repo
-
-Ve a github.com/jmpastor2 → New repository → Nombre: `jmfit` → Public → Create
-
-### 2. Sube los archivos
-
-Opción rápida desde la web de GitHub:
-- Entra al repo → "Add file" → "Upload files"
-- Arrastra `index.html` y `manifest.json`
-- Commit: "Initial JM Fit v2"
-
-### 3. Activa GitHub Pages
-
-Settings → Pages → Source: Deploy from branch → main → / (root) → Save
-
-URL resultante: `https://jmpastor2.github.io/jmfit/`
-
-### 4. Instala en iPhone
-
-1. Safari → `https://jmpastor2.github.io/jmfit/`
-2. Botón compartir (cuadrado con flecha hacia arriba)
-3. "Añadir a pantalla de inicio"
-4. ✓ Ya tienes tu app
-
-## Estructura de datos (localStorage)
-
-```
-jmv2_scans   → array de scans Boditrax
-jmv2_logs    → array de sets registrados
-jmv2_foodlog → { date, items[] } — reset diario automático
+```bash
+npm install
+npm run dev          # http://localhost:5173 (pide iniciar sesión)
+npm run check        # tipos, lint y tests
 ```
 
-## Próxima fase
+Laboratorio con una copia local de la cuenta real (las escrituras se quedan en memoria):
+`node scripts/snapshot.mjs <uuid>` y abrir `/lab.html`.
 
-- Notificaciones push de recordatorio de entreno
-- Import de PDF/CSV de Boditrax
-- SwiftUI nativa cuando tengas Mac
+Base de datos: `supabase/migrations` (aplicadas con `npx supabase db query --linked=false
+--project-ref jzhltzafdqipeortwdra -f <archivo>`). Pulsera: `docs/google-health.md`.
+Diseño: `DESIGN.md`. Investigación: `docs/research.md`. Estado: `docs/estado.md`.

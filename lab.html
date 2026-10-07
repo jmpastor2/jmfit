@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1"
+    />
+    <title>Forja · laboratorio</title>
+  </head>
+  <body>
+    <!--
+      Development lab: the real app on a local copy of the real account
+      (src/dev/real-snapshot.json, git-ignored; export with node scripts/snapshot.mjs <uuid>).
+      Writes stay in memory. ?now=2026-10-08T18:00 pretends it is that moment.
+      Not part of the production build (vite builds index.html only).
+    -->
+    <div id="root"></div>
+    <script type="module" src="/src/dev/main.tsx"></script>
+  </body>
+</html>
