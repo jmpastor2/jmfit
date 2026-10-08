@@ -78,6 +78,8 @@ export interface Exercise {
   increment: number
   /** Bodyweight exercises: load logged is extra load (lastre) on top of bodyweight. */
   bodyweight?: boolean
+  /** Held for time (planks): `reps` of its sets are seconds. */
+  timed?: boolean
   /** Default rest between work sets, seconds. */
   restSec: number
   /** 3–5 short technique cues, imperative, Spanish. */

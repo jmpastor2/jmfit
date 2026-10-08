@@ -33,6 +33,7 @@ const EXERCISES: Record<string, Exercise> = {
   bench: ex('bench'),
   squat: ex('squat', { primary: ['quads'], secondary: ['glutes'], pattern: 'squat' }),
   curl: ex('curl', { primary: ['biceps'], secondary: [], compound: false }),
+  'leg-press': ex('leg-press', { primary: ['quads'], equipment: 'plate_loaded', pattern: 'squat' }),
 }
 const lookup = (id: string) => EXERCISES[id] ?? ex(id)
 
@@ -307,5 +308,22 @@ describe('compareMonths', () => {
     // A month with nothing at all compares as zeros, without lifts or body rows.
     const empty = compareMonths(ev, '2026-08', '2026-09')
     expect(empty.every((r) => r.subject.group === 'training' && r.a === 0 && r.b === 0)).toBe(true)
+  })
+})
+
+describe('main lifts', () => {
+  it('leaves machines and plate-loaded lifts out of the 1RM block', () => {
+    const ev = buildEvolution(
+      input({
+        workouts: [workout('a', at(2026, 9, 1)), workout('b', at(2026, 9, 8))],
+        sets: [
+          set('a', at(2026, 9, 1), { exerciseId: 'leg-press', weight: 200 }),
+          set('b', at(2026, 9, 8), { exerciseId: 'leg-press', weight: 210 }),
+          set('b', at(2026, 9, 8), { exerciseId: 'bench' }),
+        ],
+      }),
+    )
+    expect(ev.mainLiftIds).toEqual(['bench'])
+    expect(ev.months.flatMap((m) => m.lifts.map((l) => l.exerciseId))).toEqual(['bench'])
   })
 })

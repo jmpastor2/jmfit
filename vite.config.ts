@@ -52,6 +52,8 @@ export default defineConfig(({ mode }) => {
               handler: 'NetworkOnly',
             },
           ],
+          // Push and notification-click handlers for rest alarms (public/push-sw.js).
+          importScripts: ['push-sw.js'],
           cleanupOutdatedCaches: true,
           clientsClaim: true,
         },

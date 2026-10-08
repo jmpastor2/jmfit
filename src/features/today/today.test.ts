@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { WorkoutFull } from '@/data/rows'
-import type { LoggedSet, Scan, UserGoal } from '@/domain/types'
+import type { LoggedSet, ProgramDay, Scan, UserGoal } from '@/domain/types'
 import {
   agoLabel,
   doneDayIdsThisWeek,
@@ -77,13 +77,44 @@ describe('greeting', () => {
 })
 
 describe('doneDayIdsThisWeek', () => {
-  it('keeps only this week and this program', () => {
+  const day = (id: string, name: string, exercises: string[]): ProgramDay => ({
+    id,
+    name,
+    focus: '',
+    weekday: null,
+    slots: exercises.map((exerciseId, i) => ({
+      id: `${id}-${i}`,
+      exerciseId,
+      sets: 3,
+      repMin: 8,
+      repMax: 12,
+      rir: 2,
+      restSec: 90,
+    })),
+  })
+  const plan = (ids: string[]) => day('_', '_', ids).slots
+  const program = {
+    days: [day('d1', 'Empuje', ['bench', 'ohp', 'dips']), day('d2', 'Tirón', ['row', 'pulldown'])],
+  }
+
+  it('keeps only this week, by day id', () => {
     const ws = [
       workout('a', at(5), 'd1'),
       workout('b', at(4), 'd2'), // Sunday: last week
-      { ...workout('c', at(6), 'd3'), programId: 'other' },
     ]
-    expect([...doneDayIdsThisWeek(ws, 'p1', NOW)]).toEqual(['d1'])
+    expect([...doneDayIdsThisWeek(ws, program, NOW)]).toEqual(['d1'])
+  })
+
+  it('recognises a re-created day by its exercises, in progress too', () => {
+    const ws = [
+      { ...workout('a', at(6), 'old-push'), endedAt: null, plan: plan(['bench', 'ohp', 'dips']) },
+    ]
+    expect([...doneDayIdsThisWeek(ws, program, NOW)]).toEqual(['d1'])
+  })
+
+  it('does not reuse a session that belongs to another day of the program', () => {
+    const ws = [{ ...workout('a', at(6), 'd1'), plan: plan(['row', 'pulldown']) }]
+    expect([...doneDayIdsThisWeek(ws, program, NOW)]).toEqual(['d1'])
   })
 })
 

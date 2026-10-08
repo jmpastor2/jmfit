@@ -21,7 +21,7 @@ import type { LoggedSet } from '@/domain/types'
 import { newId, slotFor } from '@/features/session/model'
 import { RepMaxTable } from '@/features/progress/RepMaxTable'
 import { useExerciseLookup } from './lookup'
-import { e1rmSeries, exerciseSessions } from './stats'
+import { bestSetOf, bestSetSeries, e1rmSeries, exerciseSessions, hasE1rm } from './stats'
 import { TechniqueBody } from './TechniqueSheet'
 
 type View = 'technique' | 'history'
@@ -49,7 +49,15 @@ export function ExercisePage() {
     () => exerciseSessions(exerciseId, mine, workouts ?? []),
     [exerciseId, mine, workouts],
   )
-  const series = useMemo(() => e1rmSeries(sessions), [sessions])
+  // Machines and cables: no 1RM (the load depends on the machine), the best set's load instead.
+  const oneRm = hasE1rm(exercise)
+  const e1rmPoints = useMemo(() => e1rmSeries(sessions), [sessions])
+  const loadPoints = useMemo(() => bestSetSeries(sessions), [sessions])
+  const series = oneRm ? e1rmPoints : loadPoints
+  const bestBySession = useMemo(
+    () => new Map(sessions.map((s) => [s.workoutId, bestSetOf(s.sets)] as const)),
+    [sessions],
+  )
   const bests = useMemo(() => bestsByExercise(mine)[exerciseId] ?? null, [mine, exerciseId])
   const goal = goals?.find((g) => g.kind === 'e1rm' && g.exerciseId === exerciseId && !g.achievedAt)
 
@@ -127,7 +135,9 @@ export function ExercisePage() {
           block
           variant="secondary"
           leading={<Target className="size-4" />}
-          onClick={() => nav(`/goals?new=e1rm&exercise=${encodeURIComponent(exercise.id)}`)}
+          onClick={() =>
+            nav(`/goals?new=${oneRm ? 'e1rm' : 'lift'}&exercise=${encodeURIComponent(exercise.id)}`)
+          }
         >
           Crear objetivo
         </Button>
@@ -156,24 +166,35 @@ export function ExercisePage() {
         ) : (
           <div className="flex flex-col gap-6">
             <section>
-              <SectionTitle>1RM estimado por sesión</SectionTitle>
+              <SectionTitle>
+                {oneRm ? '1RM estimado por sesión' : 'Mejor serie por sesión (kg)'}
+              </SectionTitle>
               {series.length ? (
                 <LineChart
                   points={series.map((p) => ({ x: p.date, y: p.value }))}
-                  target={goal?.target}
+                  target={oneRm ? goal?.target : undefined}
                   unit="kg"
                   format={(n) => formatNumber(n, 1)}
-                  label={`1RM estimado de ${exercise.name} en ${series.length} sesiones`}
+                  label={
+                    oneRm
+                      ? `1RM estimado de ${exercise.name} en ${series.length} sesiones`
+                      : `Peso de la mejor serie de ${exercise.name} en ${series.length} sesiones`
+                  }
                 />
               ) : (
                 <p className="text-[13.5px] text-muted">
-                  Sin series válidas para estimar el 1RM (hace falta peso y entre 1 y 15
-                  repeticiones).
+                  {oneRm
+                    ? 'Sin series válidas para estimar el 1RM (hace falta peso y entre 1 y 15 repeticiones).'
+                    : 'Sin series con peso y repeticiones todavía.'}
                 </p>
               )}
               <p className="mt-2 text-[12.5px] text-muted">
-                Mejor serie de cada sesión (fórmula de Epley con las repeticiones en reserva).
-                {goal && ` Línea discontinua: tu objetivo de ${formatNumber(goal.target)} kg.`}
+                {oneRm
+                  ? 'Mejor serie de cada sesión (fórmula de Epley con las repeticiones en reserva).'
+                  : 'Peso de la serie más pesada de cada sesión. Sin 1RM: en máquinas y poleas la carga depende de cada aparato.'}
+                {oneRm &&
+                  goal &&
+                  ` Línea discontinua: tu objetivo de ${formatNumber(goal.target)} kg.`}
               </p>
             </section>
 
@@ -181,16 +202,32 @@ export function ExercisePage() {
               <section>
                 <SectionTitle>Récords</SectionTitle>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-5">
-                  <Kpi
-                    label="1RM estimado"
-                    value={bests.e1rm ? formatNumber(bests.e1rm.value, 1) : '—'}
-                    unit={bests.e1rm ? 'kg' : undefined}
-                    caption={
-                      bests.e1rm &&
-                      `${formatNumber(bests.e1rm.weight)} × ${bests.e1rm.reps} · ${shortDate(bests.e1rm.date)}`
-                    }
-                    tone="signal"
-                  />
+                  {oneRm ? (
+                    <Kpi
+                      label="1RM estimado"
+                      value={bests.e1rm ? formatNumber(bests.e1rm.value, 1) : '—'}
+                      unit={bests.e1rm ? 'kg' : undefined}
+                      caption={
+                        bests.e1rm &&
+                        `${formatNumber(bests.e1rm.weight)} × ${bests.e1rm.reps} · ${shortDate(bests.e1rm.date)}`
+                      }
+                      tone="signal"
+                    />
+                  ) : (
+                    <Kpi
+                      label="Mejor serie"
+                      value={
+                        bests.bestSetVolume
+                          ? `${formatNumber(bests.bestSetVolume.weight)} × ${bests.bestSetVolume.reps}`
+                          : '—'
+                      }
+                      caption={
+                        bests.bestSetVolume &&
+                        `kg × reps, más volumen · ${shortDate(bests.bestSetVolume.date)}`
+                      }
+                      tone="signal"
+                    />
+                  )}
                   <Kpi
                     label="Peso máximo"
                     value={bests.maxWeight ? formatNumber(bests.maxWeight.value) : '—'}
@@ -222,12 +259,20 @@ export function ExercisePage() {
                           </span>
                         )}
                       </span>
-                      {s.bestE1rm != null && (
-                        <span className="readout shrink-0 text-[17px] font-semibold">
-                          {formatNumber(s.bestE1rm, 1)}
-                          <span className="ml-1 font-sans text-[11px] text-muted">kg 1RM</span>
-                        </span>
-                      )}
+                      {oneRm
+                        ? s.bestE1rm != null && (
+                            <span className="readout shrink-0 text-[17px] font-semibold">
+                              {formatNumber(s.bestE1rm, 1)}
+                              <span className="ml-1 font-sans text-[11px] text-muted">kg 1RM</span>
+                            </span>
+                          )
+                        : bestBySession.get(s.workoutId) && (
+                            <span className="readout shrink-0 text-[17px] font-semibold">
+                              {formatNumber(bestBySession.get(s.workoutId)!.weight ?? 0)} ×{' '}
+                              {bestBySession.get(s.workoutId)!.reps}
+                              <span className="ml-1 font-sans text-[11px] text-muted">kg</span>
+                            </span>
+                          )}
                     </Link>
                     <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
                       {s.sets.map((x) => (
@@ -236,7 +281,7 @@ export function ExercisePage() {
                           className={
                             x.kind === 'warmup'
                               ? 'readout text-[14px] text-muted'
-                              : x.id === s.bestSet?.id
+                              : x.id === (oneRm ? s.bestSet : bestBySession.get(s.workoutId))?.id
                                 ? 'readout text-[14px] text-gold-light'
                                 : 'readout text-[14px] text-ink-2'
                           }

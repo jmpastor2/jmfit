@@ -132,7 +132,7 @@ function TodayWorkout({ program, now }: { program: Program | null; now: Date }) 
   const workouts = workoutsQ.data
 
   const doneIds = useMemo(
-    () => (program && workouts ? doneDayIdsThisWeek(workouts, program.id, now) : new Set<string>()),
+    () => (program && workouts ? doneDayIdsThisWeek(workouts, program, now) : new Set<string>()),
     [program, workouts, now],
   )
   const done = useMemo(() => (workouts ? finishedToday(workouts, now) : null), [workouts, now])

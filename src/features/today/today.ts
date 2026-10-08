@@ -12,7 +12,8 @@ import {
   tonnage,
   type TonnageOptions,
 } from '@/domain/training'
-import type { LoggedSet, PersonalRecord, Scan, UserGoal } from '@/domain/types'
+import type { LoggedSet, PersonalRecord, ProgramDay, Scan, UserGoal } from '@/domain/types'
+import { dayKeyOf, sameDayWorkouts } from '@/features/train/dayMatch'
 import { PR_RANK, recordsBySet } from '@/features/train/history'
 
 const DAY_MS = 86_400_000
@@ -27,17 +28,25 @@ export function greeting(now: Date): string {
   return 'Buenas noches'
 }
 
-/** Program day ids done (finished or in progress) in the local week of `now`. */
+/**
+ * Program day ids done (finished or in progress) in the local week of `now`. A session counts
+ * for a day by day id or, when the day was re-created or the program changed, by its exercises
+ * (see `sameDayWorkouts`).
+ */
 export function doneDayIdsThisWeek(
   workouts: readonly WorkoutFull[],
-  programId: string,
+  program: { days: readonly ProgramDay[] },
   now: Date,
 ): Set<string> {
   const from = startOfLocalWeek(now).getTime()
+  const week = workouts.filter((w) => new Date(w.startedAt).getTime() >= from)
   const out = new Set<string>()
-  for (const w of workouts) {
-    if (w.programId !== programId || !w.dayId) continue
-    if (new Date(w.startedAt).getTime() >= from) out.add(w.dayId)
+  if (!week.length) return out
+  const ids = program.days.map((d) => d.id)
+  for (const d of program.days) {
+    const otherDayIds = new Set(ids.filter((id) => id !== d.id))
+    const match = sameDayWorkouts(dayKeyOf(d), week, { includeUnfinished: true, otherDayIds })
+    if (match.length) out.add(d.id)
   }
   return out
 }

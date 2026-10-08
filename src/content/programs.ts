@@ -109,7 +109,7 @@ export const PROGRAM_TEMPLATES: readonly ProgramTemplate[] = [
         s('close-grip-bench-press', 4, 6, 8),
         s('one-arm-dumbbell-row', 4, 8, 10),
         s('pec-deck', 3, 12),
-        s('incline-dumbbell-curl', 3, 10, 10, { superset: 'A', note: SUPERSET }),
+        s('incline-dumbbell-curl', 3, 10, 10, { superset: 'A', note: SUPERSET, restSec: 0 }),
         s('overhead-cable-extension', 3, 10, 10, { superset: 'A', note: SUPERSET }),
         s('plank', 3, 45, 45, { note: SECONDS }),
         s('ab-wheel', 3, 12),

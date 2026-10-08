@@ -5,9 +5,9 @@ import { Field, Input } from '@/components/ui/Field'
 import { Sheet } from '@/components/ui/Sheet'
 import { useToast } from '@/components/ui/Toast'
 import { useCheckins, useSaveCheckin } from '@/data/hooks'
-import { formatNumber, localDateKey } from '@/domain/training'
-import type { Checkin } from '@/domain/types'
+import { addLocalDays, formatNumber, localDateKey } from '@/domain/training'
 import { useNow } from '@/lib/useNow'
+import { checkinWrites, stepsToPrefill } from './checkin'
 
 type ScaleKey = 'sleepQuality' | 'energy' | 'soreness' | 'stress'
 
@@ -35,8 +35,12 @@ export function CheckinSheet({ open, onClose }: { open: boolean; onClose: () => 
 }
 
 function CheckinForm({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const today = localDateKey(useNow())
-  const existing = useCheckins().data?.find((c) => c.date === today) ?? null
+  const now = useNow()
+  const today = localDateKey(now)
+  const yesterdayKey = localDateKey(addLocalDays(now, -1))
+  const checkins = useCheckins().data
+  const existing = checkins?.find((c) => c.date === today) ?? null
+  const yesterday = checkins?.find((c) => c.date === yesterdayKey) ?? null
   const save = useSaveCheckin()
   const { toast } = useToast()
 
@@ -49,7 +53,11 @@ function CheckinForm({ open, onClose }: { open: boolean; onClose: () => void }) 
   }))
   const [hr, setHr] = useState(() => show(existing?.restingHr))
   const [hrv, setHrv] = useState(() => show(existing?.hrvMs))
-  const [steps, setSteps] = useState(() => (existing?.steps == null ? '' : String(existing.steps)))
+  // Yesterday's steps live on yesterday's row (Recuperación shows them on that day).
+  const [steps, setSteps] = useState(() => {
+    const prefill = stepsToPrefill(existing, yesterday)
+    return prefill == null ? '' : String(prefill)
+  })
   const [busy, setBusy] = useState(false)
 
   const sleep = parse(sleepH)
@@ -58,21 +66,24 @@ function CheckinForm({ open, onClose }: { open: boolean; onClose: () => void }) 
     sleep == null && Object.values(scales).every((v) => v == null) && !hr && !hrv && !steps
 
   const submit = async () => {
-    const c: Checkin = {
-      date: today,
-      sleepH: sleep,
-      sleepQuality: scales.sleepQuality,
-      energy: scales.energy,
-      soreness: scales.soreness,
-      stress: scales.stress,
-      restingHr: int(hr),
-      hrvMs: int(hrv),
-      steps: int(steps),
-    }
+    const writes = checkinWrites(
+      {
+        sleepH: sleep,
+        sleepQuality: scales.sleepQuality,
+        energy: scales.energy,
+        soreness: scales.soreness,
+        stress: scales.stress,
+        restingHr: int(hr),
+        hrvMs: int(hrv),
+        steps: int(steps),
+      },
+      { today, yesterday: yesterdayKey },
+      { today: existing, yesterday },
+    )
     setBusy(true)
     onClose()
     try {
-      await save(c)
+      await Promise.all([writes.today, writes.yesterday].flatMap((c) => (c ? [save(c)] : [])))
       toast('Check-in guardado')
     } catch {
       toast('Se guardará al recuperar la conexión', 'warn')

@@ -164,7 +164,8 @@ describe('program templates', () => {
           expect(s.repMin, s.id).toBeGreaterThanOrEqual(1)
           expect(s.repMin, s.id).toBeLessThanOrEqual(s.repMax)
           expect(s.rir, s.id).toBeGreaterThanOrEqual(0)
-          expect(s.restSec, s.id).toBeGreaterThan(0)
+          // 0 only inside a superset: the rest comes after the partner exercise.
+          expect(s.restSec, s.id).toBeGreaterThanOrEqual(s.superset ? 0 : 1)
         }
         // Supersets come in pairs or more.
         const groups = new Map<string, number>()

@@ -4,7 +4,13 @@
  */
 import { addLocalDays, startOfLocalWeek, weeklySetsByMuscle } from '@/domain/training'
 import type { Exercise, LoggedSet, Muscle } from '@/domain/types'
-import { bestE1rmInWindow, e1rmSeries, exerciseSessions } from '@/features/exercise/stats'
+import {
+  bestE1rmInWindow,
+  bestSetInWindow,
+  bestSetSeries,
+  e1rmSeries,
+  exerciseSessions,
+} from '@/features/exercise/stats'
 
 const DAY_MS = 86_400_000
 
@@ -35,6 +41,40 @@ export function strengthRow(
     exerciseId,
     current: bestE1rmInWindow(exerciseId, sets, now, 28),
     before: bestE1rmInWindow(exerciseId, sets, new Date(now.getTime() - 56 * DAY_MS), 28),
+    best,
+    spark: series.slice(-16).map((p) => p.value),
+    lastDate: series.at(-1)?.date ?? null,
+  }
+}
+
+export interface MachineRow {
+  exerciseId: string
+  /** Best set (heaviest load, then most reps) of the last 4 weeks. */
+  current: { weight: number; reps: number } | null
+  /** Load of the best set of the 4 weeks that ended 8 weeks ago. */
+  before: number | null
+  /** Best set ever, with its date: shown when there is nothing recent. */
+  best: { weight: number; reps: number; date: string } | null
+  /** Load of the best set of each session, oldest first (last 16 sessions). */
+  spark: number[]
+  lastDate: string | null
+}
+
+/** Machines and cables: best set (weight × reps) and the trend of that load, no 1RM. */
+export function machineRow(exerciseId: string, sets: readonly LoggedSet[], now: Date): MachineRow {
+  const series = bestSetSeries(exerciseSessions(exerciseId, sets))
+  let best: MachineRow['best'] = null
+  for (const p of series) {
+    if (!best || p.value > best.weight || (p.value === best.weight && p.reps > best.reps)) {
+      best = { weight: p.value, reps: p.reps, date: p.date }
+    }
+  }
+  const cur = bestSetInWindow(exerciseId, sets, now, 28)
+  const before = bestSetInWindow(exerciseId, sets, new Date(now.getTime() - 56 * DAY_MS), 28)
+  return {
+    exerciseId,
+    current: cur ? { weight: cur.weight!, reps: cur.reps! } : null,
+    before: before?.weight ?? null,
     best,
     spark: series.slice(-16).map((p) => p.value),
     lastDate: series.at(-1)?.date ?? null,

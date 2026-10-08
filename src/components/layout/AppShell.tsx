@@ -1,10 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { WifiOff } from 'lucide-react'
 import { useEffect, useRef } from 'react'
-import { Navigate, Outlet, useLocation, useNavigationType } from 'react-router-dom'
+import { Navigate, Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { prefetchCore, useProfile } from '@/data/hooks'
 import { useSession } from '@/features/auth/SessionProvider'
 import { ActiveSessionBar } from '@/features/session/ActiveSessionBar'
+import { startRestAlarmSync } from '@/features/session/restAlarmSync'
 import { useOnline } from '@/lib/useOnline'
 import { Splash } from './Splash'
 import { TabBar } from './TabBar'
@@ -12,6 +13,8 @@ import { TabBar } from './TabBar'
 /** Authenticated frame: gates on session and onboarding, renders the dock. */
 export function AppShell() {
   useScrollMemory()
+  useNotificationRouting()
+  useEffect(startRestAlarmSync, [])
   const { status, user } = useSession()
   const qc = useQueryClient()
   const userId = user?.id
@@ -50,6 +53,19 @@ export function AppShell() {
       )}
     </div>
   )
+}
+
+/** A tapped notification focuses the open app and asks it to go to its screen (push-sw.js). */
+function useNotificationRouting() {
+  const nav = useNavigate()
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return
+    const onMessage = (e: MessageEvent<{ type?: string; hash?: string }>) => {
+      if (e.data?.type === 'forja:open' && e.data.hash) nav(e.data.hash.replace(/^#/, ''))
+    }
+    navigator.serviceWorker.addEventListener('message', onMessage)
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage)
+  }, [nav])
 }
 
 /** New screens start at the top; going back returns to where you were. */

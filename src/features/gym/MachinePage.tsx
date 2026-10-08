@@ -194,13 +194,16 @@ export function MachinePage() {
               : 'Aún sin series'
           }
         />
+        {/* Machines and cables: the load depends on the machine, so the best set, not a 1RM. */}
         <Kpi
-          label="1RM estimado"
+          label="Mejor serie"
           size="sm"
-          value={best?.e1rm ? formatNumber(best.e1rm.value, 1) : '—'}
-          unit={best?.e1rm ? 'kg' : undefined}
+          value={best?.bestSetVolume ? formatNumber(best.bestSetVolume.weight) : '—'}
+          unit={best?.bestSetVolume ? 'kg' : undefined}
           caption={
-            best?.e1rm ? `De ${formatNumber(best.e1rm.weight)} kg × ${best.e1rm.reps}` : undefined
+            best?.bestSetVolume
+              ? `× ${best.bestSetVolume.reps} reps · ${dayOf(best.bestSetVolume.date)}`
+              : undefined
           }
         />
       </div>

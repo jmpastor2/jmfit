@@ -17,6 +17,15 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   «Novedades» en la Biblioteca; 152 ejercicios, 221 vídeos verificados; vídeos con segundo de inicio.
 - Descartado por el usuario: análisis de comida por foto con IA.
 
+- 2026-10-08 (paquete de mejoras): aviso push al acabar el descanso con el móvil bloqueado
+  (tablas `push_subscriptions`/`rest_alarms`, pg_cron cada 5 s → Edge Function `rest-alarms`
+  desplegada; secretos VAPID en `supabase/.env.rest.local`, git-ignorado; se activa en Ajustes →
+  Descanso o desde el panel de descanso, en iPhone desde la app instalada), la serie siguiente
+  queda a la vista sobre el panel, plancha y similares por tiempo con cronómetro, superserie sin
+  descanso entre parejas, historial que sobrevive a ediciones del programa (`train/dayMatch.ts`),
+  pasos del check-in en el día de ayer, y fuerza separada: 1RM solo en peso libre; máquinas y
+  poleas con su mejor serie.
+
 ## Pendiente
 
 1. Publicar: GitHub → Settings → Pages → Source: **GitHub Actions** (una vez), y push a `main`.

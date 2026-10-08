@@ -36,6 +36,29 @@ import {
 import { RestPanel } from './RestPanel'
 import { fmtClock, restTimer, useRestAlarm } from './restTimer'
 
+/**
+ * After a set, bring the next one into the middle of the screen, clear of the rest panel
+ * docked at the bottom (it used to sit under the panel and needed a scroll).
+ */
+function revealActiveSet() {
+  window.setTimeout(() => {
+    const el = document.querySelector<HTMLElement>('[data-active-set]')
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    // Bottom of the set just above the rest panel (≈170 px); a set taller than the room left
+    // starts under the sticky header instead.
+    const room = window.innerHeight - 170
+    const delta = r.height > room - 90 ? r.top - 90 : r.bottom - room
+    // Instant: a smooth scroll was cancelled by the re-render that follows the saved set.
+    window.scrollTo({ top: window.scrollY + delta })
+    // Long enough for the next card to open and the saved set to render.
+  }, 250)
+}
+
+/** Stable empties: a fresh `[]` each render would recompute every block. */
+const NO_SETS: LoggedSet[] = []
+const NO_WORKOUTS: WorkoutFull[] = []
+
 /** Event-time clock (sets are stamped when logged, never during render). */
 const nowIso = () => new Date().toISOString()
 
@@ -53,8 +76,8 @@ function Session({ workout }: { workout: WorkoutFull }) {
   const nav = useNavigate()
   const me = useMe()
   const { toast } = useToast()
-  const sets = useSets().data ?? []
-  const workouts = useWorkouts().data ?? []
+  const sets = useSets().data ?? NO_SETS
+  const workouts = useWorkouts().data ?? NO_WORKOUTS
   const lookup = useExerciseLookup()
   const readiness = useReadiness()
   const { saveSets, saveWorkout, deleteSets } = useTrainingActions()
@@ -121,6 +144,7 @@ function Session({ workout }: { workout: WorkoutFull }) {
       restTimer.stop()
       setFocus(partner.index)
       if (prs.length) toast(prMessage(prs[0]!), 'success')
+      revealActiveSet()
       await saveSets([set])
       return
     }
@@ -135,6 +159,7 @@ function Session({ workout }: { workout: WorkoutFull }) {
       setFocus(next === -1 ? null : next)
     }
     if (prs.length) toast(prMessage(prs[0]!), 'success')
+    revealActiveSet()
     await saveSets([set])
   }
 
@@ -173,7 +198,7 @@ function Session({ workout }: { workout: WorkoutFull }) {
   const plannedSets = blocks.reduce((a, b) => a + b.plannedWork, 0)
 
   return (
-    <div className="min-h-dvh pb-48">
+    <div className="min-h-dvh pb-[60vh]">
       <SessionHeader
         workout={workout}
         done={doneSets}
@@ -399,7 +424,7 @@ function ExerciseCard({
             {block.slot.repMin === block.slot.repMax
               ? block.slot.repMin
               : `${block.slot.repMin}–${block.slot.repMax}`}{' '}
-            reps
+            {exercise.timed ? 's' : 'reps'}
             {exercise.primary[0] ? ` · ${MUSCLE_LABEL[exercise.primary[0]]}` : ''}
           </span>
         </span>
@@ -434,7 +459,9 @@ function ExerciseCard({
           </div>
 
           <p className="border-l-2 border-gold pl-3 text-[14px] leading-snug text-ink">
-            {recommendation.message}
+            {exercise.timed
+              ? `Aguanta ${block.slot.repMin === block.slot.repMax ? block.slot.repMin : `${block.slot.repMin}–${block.slot.repMax}`} s con buena técnica. Cuando llegues con margen en todas las series, súbelo 5–10 s.`
+              : recommendation.message}
           </p>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-muted">
             {recommendation.last && (
@@ -473,7 +500,12 @@ function ExerciseCard({
                   plates={plates}
                 />
               ) : (
-                <SetLine key={`s-${i}`} row={row} label={rowLabel(rows, i)} />
+                <SetLine
+                  key={`s-${i}`}
+                  row={row}
+                  label={rowLabel(rows, i)}
+                  timed={Boolean(exercise.timed)}
+                />
               ),
             )}
           </ul>
@@ -533,14 +565,15 @@ function rowLabel(rows: RowState[], i: number): string {
   return String(rows.slice(0, i + 1).filter((r) => r.target.kind !== 'warmup').length)
 }
 
-function targetText(t: SetTarget): string {
+function targetText(t: SetTarget, timed = false): string {
   const reps = t.repMin === t.repMax ? `${t.repMin}` : `${t.repMin}–${t.repMax}`
+  if (timed) return `${reps} s`
   const w = t.weight == null ? '' : `${kg(t.weight)} kg × `
   return t.kind === 'warmup' ? `${w}${reps}` : `${w}${reps} · RIR ${t.rir}`
 }
 
 /** A set already done, or one still waiting behind the active one. */
-function SetLine({ row, label }: { row: RowState; label: string }) {
+function SetLine({ row, label, timed }: { row: RowState; label: string; timed: boolean }) {
   const done = row.done
   const warm = row.target.kind === 'warmup'
   return (
@@ -555,19 +588,26 @@ function SetLine({ row, label }: { row: RowState; label: string }) {
       </span>
       {done ? (
         <>
-          <span className="readout flex-1 text-[19px] font-semibold">
-            {kg(done.weight)}
-            <span className="ml-1 font-sans text-[12px] font-medium text-muted">kg</span>
-            <span className="mx-2 text-muted">×</span>
-            {done.reps ?? '—'}
-          </span>
+          {timed ? (
+            <span className="readout flex-1 text-[19px] font-semibold">
+              {done.reps ?? '—'}
+              <span className="ml-1 font-sans text-[12px] font-medium text-muted">s</span>
+            </span>
+          ) : (
+            <span className="readout flex-1 text-[19px] font-semibold">
+              {kg(done.weight)}
+              <span className="ml-1 font-sans text-[12px] font-medium text-muted">kg</span>
+              <span className="mx-2 text-muted">×</span>
+              {done.reps ?? '—'}
+            </span>
+          )}
           {done.rir != null && (
             <span className="text-[12.5px] text-muted">RIR {formatNumber(done.rir)}</span>
           )}
           <Check className="size-4 text-gold" strokeWidth={2.5} />
         </>
       ) : (
-        <span className="flex-1 text-[13.5px] text-muted">{targetText(row.target)}</span>
+        <span className="flex-1 text-[13.5px] text-muted">{targetText(row.target, timed)}</span>
       )}
     </li>
   )
@@ -617,31 +657,35 @@ function ActiveSet({
   }
 
   return (
-    <li className="my-2 rounded-[8px] border border-gold/40 bg-signal-soft p-3">
+    <li data-active-set className="my-2 rounded-[8px] border border-gold/40 bg-signal-soft p-3">
       <div className="mb-3 flex items-baseline justify-between">
         <span className="spec text-gold">
           {kindLabel[t.kind]} {label.replace('C', '')}
         </span>
-        <span className="text-[12.5px] text-ink-2">Objetivo {targetText(t)}</span>
+        <span className="text-[12.5px] text-ink-2">Objetivo {targetText(t, exercise.timed)}</span>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <Stepper
-          label={exercise.bodyweight ? 'Lastre kg' : 'Kg'}
-          value={weight}
-          onChange={setWeight}
-          onMinus={() => bump(-step)}
-          onPlus={() => bump(step)}
-          decimal
-        />
-        <Stepper
-          label="Reps"
-          value={reps}
-          onChange={setReps}
-          onMinus={() => setReps(String(Math.max(0, (r ?? 0) - 1)))}
-          onPlus={() => setReps(String((r ?? 0) + 1))}
-        />
-      </div>
-      {t.kind !== 'warmup' && (
+      {exercise.timed ? (
+        <HoldTimer seconds={reps} onSeconds={setReps} target={t.repMin} />
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <Stepper
+            label={exercise.bodyweight ? 'Lastre kg' : 'Kg'}
+            value={weight}
+            onChange={setWeight}
+            onMinus={() => bump(-step)}
+            onPlus={() => bump(step)}
+            decimal
+          />
+          <Stepper
+            label="Reps"
+            value={reps}
+            onChange={setReps}
+            onMinus={() => setReps(String(Math.max(0, (r ?? 0) - 1)))}
+            onPlus={() => setReps(String((r ?? 0) + 1))}
+          />
+        </div>
+      )}
+      {t.kind !== 'warmup' && !exercise.timed && (
         <div className="mt-3">
           <div className="mb-1.5 flex items-baseline justify-between">
             <span className="spec">Reps en recámara</span>
@@ -678,12 +722,15 @@ function ActiveSet({
         size="lg"
         className="mt-3"
         loading={busy}
-        disabled={r == null}
+        // A loaded exercise needs its weight; bodyweight (lastre 0) and held sets do not.
+        disabled={r == null || (w == null && !exercise.bodyweight && !exercise.timed)}
         leading={<Check className="size-5" strokeWidth={2.6} />}
         onClick={async () => {
           setBusy(true)
           try {
-            await onLog({ weight: w, reps: r, rir })
+            await onLog(
+              exercise.timed ? { weight: null, reps: r, rir: null } : { weight: w, reps: r, rir },
+            )
           } finally {
             setBusy(false)
           }
@@ -739,6 +786,65 @@ function Stepper({
           <Plus className="size-4" />
         </button>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Held sets (planks): a stopwatch that fills the seconds when stopped, plus a stepper to fix
+ * them by hand. The target is marked; passing it vibrates once.
+ */
+function HoldTimer({
+  seconds,
+  onSeconds,
+  target,
+}: {
+  seconds: string
+  onSeconds: (v: string) => void
+  target: number
+}) {
+  const [startedAt, setStartedAt] = useState<number | null>(null)
+  const now = useNow(startedAt ? 250 : 60_000)
+  const elapsed = startedAt ? Math.max(0, Math.floor((now.getTime() - startedAt) / 1000)) : null
+  const [buzzed, setBuzzed] = useState(false)
+  if (elapsed !== null && elapsed >= target && !buzzed) {
+    setBuzzed(true)
+    navigator.vibrate?.([120, 60, 120])
+  }
+  const n = parseNum(seconds) ?? 0
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between rounded-[6px] border border-line bg-panel px-4 py-3">
+        <span
+          className={clsx(
+            'readout text-[44px] font-semibold leading-none',
+            elapsed !== null && elapsed >= target ? 'text-gold' : 'text-ink',
+          )}
+        >
+          {fmtClock(elapsed ?? n)}
+        </span>
+        <Button
+          variant={startedAt ? 'primary' : 'secondary'}
+          onClick={() => {
+            if (startedAt) {
+              onSeconds(String(elapsed ?? 0))
+              setStartedAt(null)
+            } else {
+              setBuzzed(false)
+              setStartedAt(Date.now())
+            }
+          }}
+        >
+          {startedAt ? 'Parar' : 'Cronómetro'}
+        </Button>
+      </div>
+      <Stepper
+        label="Segundos"
+        value={seconds}
+        onChange={onSeconds}
+        onMinus={() => onSeconds(String(Math.max(0, n - 5)))}
+        onPlus={() => onSeconds(String(n + 5))}
+      />
     </div>
   )
 }

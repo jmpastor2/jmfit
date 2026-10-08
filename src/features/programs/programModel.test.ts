@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { ProgramTemplate, Slot } from '@/domain/types'
 import {
+  emptyDay,
   move,
+  patchDayIn,
   programFromTemplate,
   REST_OPTIONS,
   validateProgram,
@@ -84,5 +86,32 @@ describe('validation', () => {
     expect(REST_OPTIONS[0]).toBe(45)
     expect(REST_OPTIONS.at(-1)).toBe(240)
     expect(REST_OPTIONS).toHaveLength(14)
+  })
+})
+
+describe('day ids', () => {
+  it('editing a day keeps its id, even if the patch carries another one', () => {
+    const days = [emptyDay('d1', 0), emptyDay('d2', 1)]
+    const out = patchDayIn(days, 'd1', { name: 'Empuje', id: 'hijack' })
+    expect(out.map((d) => [d.id, d.name])).toEqual([
+      ['d1', 'Empuje'],
+      ['d2', 'Día 2'],
+    ])
+  })
+  it('new days and days copied from a template get fresh ids', () => {
+    expect(emptyDay('fresh', 2).id).toBe('fresh')
+    let n = 0
+    const t: ProgramTemplate = {
+      id: 't',
+      name: 'T',
+      description: '',
+      goal: ['hypertrophy'],
+      level: ['intermediate'],
+      daysPerWeek: 1,
+      mesoWeeks: 4,
+      days: [{ id: 'tpl-day', name: 'A', focus: '', weekday: null, slots: [] }],
+    }
+    const p = programFromTemplate(t, '2026-10-07', () => `id${++n}`)
+    expect(p.days[0]!.id).not.toBe('tpl-day')
   })
 })

@@ -10,6 +10,7 @@ import { tonnage } from '@/domain/training'
 import type { Exercise } from '@/domain/types'
 import { useExerciseLookup } from '@/features/exercise/lookup'
 import { mesoWeek, useStartWorkout } from '@/features/session/useStartWorkout'
+import { dayKeyOf, lastSameDay } from './dayMatch'
 import {
   estimateMinutes,
   formatInt,
@@ -79,15 +80,18 @@ function ProgramDays({ program }: { program: Program }) {
   const workouts = useWorkouts().data
   const start = useStartWorkout()
   const meso = mesoWeek(program)
+  // By day id, or by exercises when the day was re-created or the program changed.
   const lastByDay = useMemo(() => {
     const out = new Map<string, WorkoutFull>()
-    for (const w of workouts ?? []) {
-      if (!w.endedAt || w.programId !== program.id || !w.dayId) continue
-      const cur = out.get(w.dayId)
-      if (!cur || w.startedAt > cur.startedAt) out.set(w.dayId, w)
+    if (!workouts?.length) return out
+    const ids = program.days.map((d) => d.id)
+    for (const d of program.days) {
+      const otherDayIds = new Set(ids.filter((id) => id !== d.id))
+      const last = lastSameDay(dayKeyOf(d), workouts, { otherDayIds })
+      if (last) out.set(d.id, last)
     }
     return out
-  }, [workouts, program.id])
+  }, [workouts, program.days])
 
   return (
     <section className="mb-5">

@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import type { Exercise, LoggedSet } from '@/domain/types'
 import {
+  bestSetInWindow,
+  bestSetOf,
+  bestSetSeries,
   bestE1rmInWindow,
   currentE1rm,
   e1rmSeries,
   exerciseSessions,
   latestBodyweight,
+  hasE1rm,
+  liftKind,
+  machineLifts,
   mainLifts,
   prTimeline,
   setE1rm,
@@ -72,20 +78,94 @@ describe('current e1RM', () => {
   })
 })
 
-describe('mainLifts', () => {
-  it('lists compound lifts with data by frequency', () => {
-    const lookup = (id: string) => ({ id, name: id, compound: id !== 'curl' }) as Exercise
-    const sets = [
-      set({ exerciseId: 'squat', workoutId: 'a' }),
-      set({ exerciseId: 'squat', workoutId: 'b' }),
-      set({ exerciseId: 'bench-press', workoutId: 'a' }),
-      set({ exerciseId: 'curl', workoutId: 'a' }),
-      set({ exerciseId: 'row', workoutId: 'a', kind: 'warmup' }),
-    ]
+describe('liftKind', () => {
+  const ex = (over: Partial<Exercise>) =>
+    ({ id: 'x', equipment: 'barbell', ...over }) as Pick<
+      Exercise,
+      'id' | 'equipment' | 'bodyweight'
+    >
+  it('gives 1RM to free weights and to weighted bodyweight lifts with a standard', () => {
+    for (const equipment of ['barbell', 'dumbbell', 'ez_bar', 'smith'] as const) {
+      expect(liftKind(ex({ equipment }))).toBe('strength')
+    }
+    expect(liftKind(ex({ id: 'pull-up', equipment: 'bodyweight', bodyweight: true }))).toBe(
+      'strength',
+    )
+    expect(hasE1rm(ex({ id: 'dips', equipment: 'bodyweight', bodyweight: true }))).toBe(false)
+  })
+  it('puts machines, cables and plate-loaded apart, and leaves the rest out', () => {
+    for (const equipment of ['machine', 'cable', 'plate_loaded'] as const) {
+      expect(liftKind(ex({ equipment }))).toBe('machine')
+    }
+    for (const equipment of ['band', 'kettlebell', 'cardio', 'bodyweight'] as const) {
+      expect(liftKind(ex({ equipment }))).toBeNull()
+    }
+  })
+})
+
+describe('mainLifts / machineLifts', () => {
+  const EQ: Record<string, Exercise['equipment']> = {
+    squat: 'barbell',
+    'bench-press': 'barbell',
+    curl: 'dumbbell',
+    'leg-press': 'plate_loaded',
+    pulldown: 'cable',
+    'chest-press': 'machine',
+  }
+  const lookup = (id: string) =>
+    ({ id, name: id, compound: id !== 'curl', equipment: EQ[id] ?? 'band' }) as Exercise
+  const sets = [
+    set({ exerciseId: 'squat', workoutId: 'a' }),
+    set({ exerciseId: 'squat', workoutId: 'b' }),
+    set({ exerciseId: 'bench-press', workoutId: 'a' }),
+    set({ exerciseId: 'curl', workoutId: 'a' }),
+    set({ exerciseId: 'row', workoutId: 'a', kind: 'warmup' }),
+    set({ exerciseId: 'leg-press', workoutId: 'a', weight: 160 }),
+    set({ exerciseId: 'pulldown', workoutId: 'a' }),
+    set({ exerciseId: 'pulldown', workoutId: 'b' }),
+    set({ exerciseId: 'chest-press', workoutId: 'b', weight: 0 }),
+  ]
+  it('lists compound free-weight lifts with data by frequency', () => {
     expect(mainLifts(sets, lookup).map((l) => [l.exercise.id, l.sessions])).toEqual([
       ['squat', 2],
       ['bench-press', 1],
     ])
+  })
+  it('lists machines and cables apart, only with loaded sets', () => {
+    expect(machineLifts(sets, lookup).map((l) => [l.exercise.id, l.sessions])).toEqual([
+      ['pulldown', 2],
+      ['leg-press', 1],
+    ])
+  })
+})
+
+describe('best sets', () => {
+  it('bestSetOf takes the heaviest load, then the most reps, ignoring warm-ups', () => {
+    const a = set({ weight: 50, reps: 12 })
+    const b = set({ weight: 60, reps: 8 })
+    const c = set({ weight: 60, reps: 10 })
+    const w = set({ weight: 70, reps: 5, kind: 'warmup' })
+    expect(bestSetOf([a, b, c, w])?.id).toBe(c.id)
+    expect(bestSetOf([set({ weight: 0 }), w])).toBeNull()
+  })
+  it('bestSetSeries gives the best load per session, oldest first', () => {
+    const sets = [
+      set({ workoutId: 'b', weight: 65, reps: 8, doneAt: '2026-08-08T10:00:00Z' }),
+      set({ workoutId: 'a', weight: 60, reps: 10, doneAt: '2026-08-01T10:00:00Z' }),
+      set({ workoutId: 'a', weight: 55, reps: 12, doneAt: '2026-08-01T10:03:00Z' }),
+    ]
+    expect(bestSetSeries(exerciseSessions('bench-press', sets))).toEqual([
+      { date: '2026-08-01T10:00:00Z', value: 60, reps: 10 },
+      { date: '2026-08-08T10:00:00Z', value: 65, reps: 8 },
+    ])
+  })
+  it('bestSetInWindow only looks at the window', () => {
+    const sets = [
+      set({ weight: 90, doneAt: '2026-07-01T10:00:00Z' }),
+      set({ weight: 70, doneAt: '2026-09-20T10:00:00Z' }),
+    ]
+    expect(bestSetInWindow('bench-press', sets, new Date('2026-10-01T00:00:00Z'))?.weight).toBe(70)
+    expect(bestSetInWindow('bench-press', sets, new Date('2026-12-31T00:00:00Z'))).toBeNull()
   })
 })
 

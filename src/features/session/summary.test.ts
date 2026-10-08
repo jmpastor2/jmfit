@@ -95,6 +95,24 @@ describe('previousSameDay', () => {
     ]
     expect(previousSameDay(free, list)?.id).toBe('g')
   })
+  it('finds the same day after it was re-created, by its exercises', () => {
+    const plan = ['bench', 'ohp', 'pushdown'].map((exerciseId, i) => ({
+      id: `p${i}`,
+      exerciseId,
+      sets: 3,
+      repMin: 8,
+      repMax: 12,
+      rir: 2,
+      restSec: 90,
+    }))
+    const now = workout({ id: 'n', startedAt: '2026-10-07T10:00:00Z', dayId: 'new', plan })
+    const list = [
+      now,
+      workout({ id: 'old', startedAt: '2026-09-30T10:00:00Z', dayId: 'gone', plan }),
+      workout({ id: 'leg', startedAt: '2026-10-02T10:00:00Z', dayId: 'legs', plan: [] }),
+    ]
+    expect(previousSameDay(now, list)?.id).toBe('old')
+  })
   it('answers null without history', () => {
     expect(previousSameDay(cur, [cur])).toBeNull()
   })

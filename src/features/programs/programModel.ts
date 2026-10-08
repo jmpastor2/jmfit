@@ -83,6 +83,18 @@ export function validateSlot(s: Slot): string[] {
   return out
 }
 
+/**
+ * Apply a patch to one day. The day keeps its id whatever the patch says: past sessions link to
+ * it (`Workout.dayId`), so editing a day must never break «la última vez».
+ */
+export function patchDayIn(
+  days: readonly ProgramDay[],
+  dayId: string,
+  p: Partial<ProgramDay>,
+): ProgramDay[] {
+  return days.map((d) => (d.id === dayId ? { ...d, ...p, id: d.id } : d))
+}
+
 export function emptyDay(id: string, index: number): ProgramDay {
   return { id, name: `Día ${index + 1}`, focus: '', weekday: null, slots: [] }
 }

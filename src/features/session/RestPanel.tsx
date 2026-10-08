@@ -1,5 +1,6 @@
 import { clsx } from 'clsx'
 import { fmtClock, restTimer, useRest } from './restTimer'
+import { RestPushToggle } from './RestPushToggle'
 
 /**
  * Rest between sets: a big countdown docked at the bottom, a gold bar that empties, ±15 s and
@@ -43,6 +44,7 @@ export function RestPanel() {
           {over ? 'Cerrar' : 'Saltar'}
         </RestButton>
       </div>
+      <RestPushToggle compact />
     </div>
   )
 }

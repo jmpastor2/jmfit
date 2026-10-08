@@ -12,6 +12,7 @@ import {
   type TonnageOptions,
 } from '@/domain/training'
 import type { Exercise, LoggedSet, Muscle, PersonalRecord } from '@/domain/types'
+import { lastSameDay, workoutKeyOf } from '@/features/train/dayMatch'
 import { PR_RANK } from '@/features/train/history'
 
 export interface SessionTotals {
@@ -34,22 +35,18 @@ export function sessionTotals(
 }
 
 /**
- * The last finished workout before `workout` of the same program day (same program and day id).
- * Without a program day, the last one with the same name. Null when there is none.
+ * The last finished workout before `workout` of the same program day: same day id or, when the
+ * day was re-created or the program changed, a similar plan (see `sameDayWorkouts`). Without a
+ * plan, the last one with the same name. Null when there is none.
  */
 export function previousSameDay(
   workout: WorkoutFull,
   workouts: readonly WorkoutFull[],
 ): WorkoutFull | null {
-  const same = (w: WorkoutFull) =>
-    workout.dayId
-      ? w.dayId === workout.dayId && w.programId === workout.programId
-      : !w.dayId && w.name === workout.name
-  return (
-    workouts
-      .filter((w) => w.id !== workout.id && w.endedAt && w.startedAt < workout.startedAt && same(w))
-      .toSorted((a, b) => b.startedAt.localeCompare(a.startedAt))[0] ?? null
-  )
+  return lastSameDay(workoutKeyOf(workout), workouts, {
+    excludeId: workout.id,
+    before: workout.startedAt,
+  })
 }
 
 /**

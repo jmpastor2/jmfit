@@ -22,9 +22,15 @@ import {
 } from '@/domain/training'
 import type { Exercise, LoggedSet, Muscle, PersonalRecord } from '@/domain/types'
 import { useExerciseLookup } from '@/features/exercise/lookup'
-import { latestBodyweight, mainLifts, prTimeline } from '@/features/exercise/stats'
+import {
+  latestBodyweight,
+  machineLifts,
+  mainLifts,
+  prTimeline,
+  hasE1rm,
+} from '@/features/exercise/stats'
 import { RepMaxTable } from './RepMaxTable'
-import { muscleSets, strengthRow, type WeekView } from './progressStats'
+import { machineRow, muscleSets, strengthRow, type WeekView } from './progressStats'
 
 type View = 'strength' | 'volume' | 'records'
 
@@ -122,8 +128,18 @@ function StrengthView({ sets }: { sets: LoggedSet[] }) {
       ),
     [sets, lookup, now],
   )
+  const machines = useMemo(
+    () =>
+      machineLifts(sets, lookup).map((l) =>
+        Object.assign(machineRow(l.exercise.id, sets, now), {
+          exercise: l.exercise,
+          sessions: l.sessions,
+        }),
+      ),
+    [sets, lookup, now],
+  )
 
-  if (!rows.length) {
+  if (!rows.length && !machines.length) {
     return (
       <EmptyState
         title="Sin levantamientos principales"
@@ -134,19 +150,100 @@ function StrengthView({ sets }: { sets: LoggedSet[] }) {
 
   return (
     <>
-      <p className="mb-2 px-1 text-[13px] text-muted">
-        1RM estimado: la mejor serie de las últimas 4 semanas. La flecha compara con hace 8 semanas.
-        {bw
-          ? ` Nivel (tablas de Strength Level) relativo a ${formatNumber(bw.value, 1)} kg de peso corporal (${shortDate(bw.date)}).`
-          : ' Sin peso corporal: registra un escáner para ver tu nivel.'}
-        {bw && !sex && ' Indica tu sexo en Ajustes para ver tu nivel.'}
+      {rows.length > 0 && (
+        <section className="mb-6">
+          {machines.length > 0 && <SectionTitle>Peso libre</SectionTitle>}
+          <p className="mb-2 px-1 text-[13px] text-muted">
+            1RM estimado: la mejor serie de las últimas 4 semanas. La flecha compara con hace 8
+            semanas.
+            {bw
+              ? ` Nivel (tablas de Strength Level) relativo a ${formatNumber(bw.value, 1)} kg de peso corporal (${shortDate(bw.date)}).`
+              : ' Sin peso corporal: registra un escáner para ver tu nivel.'}
+            {bw && !sex && ' Indica tu sexo en Ajustes para ver tu nivel.'}
+          </p>
+          <ul className="divide-y divide-line">
+            {rows.map((r) => {
+              const value = r.current ?? r.best?.value ?? null
+              const delta = r.current != null && r.before != null ? r.current - r.before : null
+              const level =
+                value != null && bw && sex
+                  ? strengthLevel(r.exercise.id, value, bw.value, sex)
+                  : null
+              return (
+                <li key={r.exercise.id}>
+                  <Link
+                    to={`/exercise/${r.exercise.id}`}
+                    className="flex min-h-[64px] items-center gap-3 py-3 active:bg-panel-2"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[15px] font-medium leading-snug">
+                        {r.exercise.name}
+                      </span>
+                      <span className="block text-[12.5px] text-muted">
+                        {level ? (
+                          <>
+                            <span className="text-gold">{STRENGTH_LEVEL_LABEL[level.level]}</span>
+                            {` · ${formatNumber(level.ratio, 2)} × tu peso`}
+                            {level.next &&
+                              ` · ${STRENGTH_LEVEL_LABEL[level.next.level].toLowerCase()} a ${formatNumber(level.next.e1rm, 1)} kg`}
+                          </>
+                        ) : (
+                          `${r.sessions} ${r.sessions === 1 ? 'sesión' : 'sesiones'}`
+                        )}
+                        {r.current == null &&
+                          r.lastDate &&
+                          ` · última vez ${shortDate(r.lastDate)}`}
+                      </span>
+                    </span>
+                    <span className="hidden w-16 shrink-0 min-[360px]:block">
+                      <Spark values={r.spark} height={28} />
+                    </span>
+                    <span className="flex w-[74px] shrink-0 flex-col items-end">
+                      <span className="readout text-[22px] font-semibold leading-none">
+                        {value != null ? formatNumber(value, 1) : '—'}
+                        <span className="ml-0.5 font-sans text-[11px] text-muted">kg</span>
+                      </span>
+                      {delta != null ? (
+                        <Delta
+                          className="mt-0.5"
+                          text={`${delta >= 0 ? '+' : ''}${formatNumber(delta, 1)}`}
+                          direction={Math.abs(delta) < 0.05 ? 'flat' : delta > 0 ? 'up' : 'down'}
+                          tone={Math.abs(delta) < 0.05 ? 'neutral' : delta > 0 ? 'good' : 'bad'}
+                        />
+                      ) : (
+                        <span className="mt-0.5 text-[11.5px] text-muted">
+                          {r.current == null ? 'sin datos recientes' : 'sin dato de hace 8 sem'}
+                        </span>
+                      )}
+                    </span>
+                    <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      )}
+      {machines.length > 0 && <MachineList rows={machines} />}
+    </>
+  )
+}
+
+type MachineListRow = ReturnType<typeof machineRow> & { exercise: Exercise; sessions: number }
+
+/** Machines and cables: the load depends on the machine, so best set and its trend only. */
+function MachineList({ rows }: { rows: MachineListRow[] }) {
+  return (
+    <section>
+      <SectionTitle>Máquinas y poleas</SectionTitle>
+      <p className="-mt-1 mb-2 px-1 text-[12.5px] text-muted">
+        Mejor serie de las últimas 4 semanas (peso × reps). Sin 1RM ni nivel: la carga depende de
+        cada máquina. La flecha compara la carga con hace 8 semanas.
       </p>
       <ul className="divide-y divide-line">
         {rows.map((r) => {
-          const value = r.current ?? r.best?.value ?? null
-          const delta = r.current != null && r.before != null ? r.current - r.before : null
-          const level =
-            value != null && bw && sex ? strengthLevel(r.exercise.id, value, bw.value, sex) : null
+          const shown = r.current ?? r.best
+          const delta = r.current != null && r.before != null ? r.current.weight - r.before : null
           return (
             <li key={r.exercise.id}>
               <Link
@@ -158,16 +255,8 @@ function StrengthView({ sets }: { sets: LoggedSet[] }) {
                     {r.exercise.name}
                   </span>
                   <span className="block text-[12.5px] text-muted">
-                    {level ? (
-                      <>
-                        <span className="text-gold">{STRENGTH_LEVEL_LABEL[level.level]}</span>
-                        {` · ${formatNumber(level.ratio, 2)} × tu peso`}
-                        {level.next &&
-                          ` · ${STRENGTH_LEVEL_LABEL[level.next.level].toLowerCase()} a ${formatNumber(level.next.e1rm, 1)} kg`}
-                      </>
-                    ) : (
-                      `${r.sessions} ${r.sessions === 1 ? 'sesión' : 'sesiones'}`
-                    )}
+                    {`${r.sessions} ${r.sessions === 1 ? 'sesión' : 'sesiones'}`}
+                    {shown && ` · mejor serie × ${shown.reps}`}
                     {r.current == null && r.lastDate && ` · última vez ${shortDate(r.lastDate)}`}
                   </span>
                 </span>
@@ -176,7 +265,7 @@ function StrengthView({ sets }: { sets: LoggedSet[] }) {
                 </span>
                 <span className="flex w-[74px] shrink-0 flex-col items-end">
                   <span className="readout text-[22px] font-semibold leading-none">
-                    {value != null ? formatNumber(value, 1) : '—'}
+                    {shown ? formatNumber(shown.weight, 1) : '—'}
                     <span className="ml-0.5 font-sans text-[11px] text-muted">kg</span>
                   </span>
                   {delta != null ? (
@@ -198,7 +287,7 @@ function StrengthView({ sets }: { sets: LoggedSet[] }) {
           )
         })}
       </ul>
-    </>
+    </section>
   )
 }
 
@@ -527,11 +616,23 @@ function RecordRow({
           </span>
         </span>
         <span className="shrink-0 text-right">
-          <span className="readout block text-[20px] font-semibold leading-none">
-            {bests.e1rm ? formatNumber(bests.e1rm.value, 1) : '—'}
-            <span className="ml-0.5 font-sans text-[11px] text-muted">kg</span>
-          </span>
-          <span className="spec text-[10.5px]">1RM est.</span>
+          {hasE1rm(exercise) ? (
+            <>
+              <span className="readout block text-[20px] font-semibold leading-none">
+                {bests.e1rm ? formatNumber(bests.e1rm.value, 1) : '—'}
+                <span className="ml-0.5 font-sans text-[11px] text-muted">kg</span>
+              </span>
+              <span className="spec text-[10.5px]">1RM est.</span>
+            </>
+          ) : (
+            <>
+              <span className="readout block text-[20px] font-semibold leading-none">
+                {bests.maxWeight ? formatNumber(bests.maxWeight.value) : '—'}
+                <span className="ml-0.5 font-sans text-[11px] text-muted">kg</span>
+              </span>
+              <span className="spec text-[10.5px]">Máx.</span>
+            </>
+          )}
         </span>
       </button>
       {open && (

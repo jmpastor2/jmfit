@@ -25,6 +25,7 @@ import {
   MESO_MAX,
   MESO_MIN,
   move,
+  patchDayIn,
   REST_OPTIONS,
   sameProgram,
   SUPERSET_LETTERS,
@@ -98,7 +99,7 @@ function Editor({ initial }: { initial: Program }) {
 
   const patch = (p: Partial<Program>) => setDraft((d) => ({ ...d, ...p }))
   const patchDay = (dayId: string, p: Partial<ProgramDay>) =>
-    setDraft((d) => ({ ...d, days: d.days.map((x) => (x.id === dayId ? { ...x, ...p } : x)) }))
+    setDraft((d) => ({ ...d, days: patchDayIn(d.days, dayId, p) }))
   const patchSlot = (dayId: string, slotId: string, p: Partial<Slot>) =>
     setDraft((d) => ({
       ...d,

@@ -50,6 +50,13 @@ export const restTimer = {
   },
 }
 
+/** Every change of the rest (started, extended, stopped), for the push alarm sync. */
+export function onRestChange(l: (rest: RestState | null) => void): () => void {
+  const wrapped = () => l(state)
+  listeners.add(wrapped)
+  return () => listeners.delete(wrapped)
+}
+
 function subscribe(l: () => void) {
   listeners.add(l)
   return () => listeners.delete(l)

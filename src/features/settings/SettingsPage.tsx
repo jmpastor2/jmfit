@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
+import { RestPushToggle } from '@/features/session/RestPushToggle'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Field, Input, Select } from '@/components/ui/Field'
@@ -217,6 +218,7 @@ export function SettingsPage() {
             label="Sonido al acabar el descanso"
             hint="Además de la vibración."
           />
+          <RestPushToggle />
         </Group>
 
         <Group title="Macros objetivo">
