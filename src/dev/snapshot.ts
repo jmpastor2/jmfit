@@ -24,5 +24,19 @@ export function loadRealAccount(): RealAccount | null {
   for (const [table, rows] of Object.entries(snapshot)) {
     if (Array.isArray(rows)) store[table] = rows.map((r) => ({ ...r }))
   }
+  // The owner is in and approves the others; someone waiting gives the list something to show.
+  const stamp = new Date().toISOString()
+  store.access ??= [
+    { user_id: owner, status: 'approved', is_admin: true, requested_at: stamp, decided_at: stamp },
+    {
+      user_id: 'lab-request',
+      status: 'pending',
+      is_admin: false,
+      requested_at: stamp,
+      decided_at: null,
+      email: 'lucia@example.com',
+      display_name: 'Lucía',
+    },
+  ]
   return { store, user: { id: owner, email: 'lab@forja.test' } }
 }

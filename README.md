@@ -28,5 +28,6 @@ Laboratorio con una copia local de la cuenta real (las escrituras se quedan en m
 `node scripts/snapshot.mjs <uuid>` y abrir `/lab.html`.
 
 Base de datos: `supabase/migrations` (aplicadas con `npx supabase db query --linked=false
---project-ref jzhltzafdqipeortwdra -f <archivo>`). Pulsera: `docs/google-health.md`.
+--project-ref jzhltzafdqipeortwdra -f <archivo>`; el acceso es con aprobación, ver
+`20261013000000_access_approval.sql`). Pulsera: `docs/google-health.md`.
 Diseño: `DESIGN.md`. Investigación: `docs/research.md`. Estado: `docs/estado.md`.

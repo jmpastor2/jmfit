@@ -26,12 +26,20 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   pasos del check-in en el día de ayer, y fuerza separada: 1RM solo en peso libre; máquinas y
   poleas con su mejor serie.
 
+- 2026-10-13: acceso con aprobación (migración `20261013000000_access_approval.sql`, aplicada). En la
+  entrada, «Solicitar acceso» crea una cuenta pendiente; la base de datos no le deja leer ni escribir
+  nada (política restrictiva `approved_only` en cada tabla de `public`: una tabla nueva necesita volver a
+  ejecutar la migración). Pantalla «Solicitud enviada»; Más → Accesos (solo admin) para aprobar, rechazar
+  o quitar el acceso; cada solicitud avisa por ntfy.sh (secreto de Vault `access_ntfy_topic`). Admins a
+  mano en `public.access.is_admin`. Solo queda la cuenta del usuario; la de prueba, sin acceso.
+
 ## Pendiente
 
 1. Publicar: GitHub → Settings → Pages → Source: **GitHub Actions** (una vez), y push a `main`.
 2. Google Health API: Google no admite proyectos nuevos (oct 2026). La función
    `supabase/functions/google-health` está escrita pero sin desplegar; seguir `docs/google-health.md`
-   cuando abran el acceso. Mientras tanto, check-in diario con los números de la app Google Health.
+   cuando abran el acceso (al desplegarla, que compruebe que la cuenta está aprobada en `public.access`:
+   usa la service role y se salta el candado). Mientras tanto, check-in diario con los números de la app
+   Google Health.
 3. Probar la importación CSV con un export real de Boditrax.
 4. Revisar los vídeos de canales pequeños (Sergio Tejeda, Zonapablo, Galvistrainer).
-5. Cuentas de Andrés y julian: el usuario decide borrarlas (SQL en el mensaje de entrega).

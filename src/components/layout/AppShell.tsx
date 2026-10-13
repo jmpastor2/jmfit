@@ -3,6 +3,8 @@ import { WifiOff } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { prefetchCore, useProfile } from '@/data/hooks'
+import { AccessPending } from '@/features/access/AccessPending'
+import { accessVerdict, useAccess } from '@/features/access/data'
 import { useSession } from '@/features/auth/SessionProvider'
 import { ActiveSessionBar } from '@/features/session/ActiveSessionBar'
 import { startRestAlarmSync } from '@/features/session/restAlarmSync'
@@ -10,7 +12,7 @@ import { useOnline } from '@/lib/useOnline'
 import { Splash } from './Splash'
 import { TabBar } from './TabBar'
 
-/** Authenticated frame: gates on session and onboarding, renders the dock. */
+/** Authenticated frame: gates on session, approval and onboarding, renders the dock. */
 export function AppShell() {
   useScrollMemory()
   useNotificationRouting()
@@ -21,6 +23,7 @@ export function AppShell() {
   useEffect(() => {
     if (userId) void prefetchCore(qc, userId)
   }, [qc, userId])
+  const access = useAccess(userId)
   const profile = useProfile(userId)
   const online = useOnline()
   const { pathname } = useLocation()
@@ -29,6 +32,9 @@ export function AppShell() {
 
   if (status === 'loading') return <Splash />
   if (status === 'signed_out') return <Navigate to="/auth" replace />
+  const verdict = accessVerdict(access.data, access.isError)
+  if (verdict === 'loading') return <Splash />
+  if (verdict !== 'open') return <AccessPending verdict={verdict} />
   if (profile.isPending) return <Splash />
   if (profile.isError || !profile.data) return <Splash error={profile.error?.message} />
   if (!profile.data.onboarded) return <Navigate to="/onboarding" replace />

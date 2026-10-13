@@ -5,6 +5,7 @@ import {
   Download,
   Dumbbell,
   HeartPulse,
+  KeyRound,
   LogOut,
   Settings,
   Target,
@@ -15,6 +16,8 @@ import { Link } from 'react-router-dom'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { useToast } from '@/components/ui/Toast'
 import { useMe, useScans } from '@/data/hooks'
+import { useAccess, useAccessRequests } from '@/features/access/data'
+import { useSession } from '@/features/auth/SessionProvider'
 import { formatNumber } from '@/domain/training'
 import { EXPERIENCE_LABEL, GOAL_LABEL } from '@/features/programs/labels'
 import { env } from '@/lib/env'
@@ -46,6 +49,8 @@ function ageFrom(birth: string | null, now = new Date()): number | null {
 export function MorePage() {
   const me = useMe()
   const lastScan = useScans().data?.at(-1) ?? null
+  const isAdmin = useAccess(useSession().user?.id).data?.is_admin === true
+  const waiting = (useAccessRequests(isAdmin).data ?? []).filter((r) => r.status === 'pending')
   const qc = useQueryClient()
   const { toast } = useToast()
   const [exporting, setExporting] = useState(false)
@@ -120,6 +125,18 @@ export function MorePage() {
         <NavRow to="/gym" icon={<Dumbbell />} label="Mi gimnasio" hint="Fitness Park" />
         <NavRow to="/settings/health" icon={<HeartPulse />} label="Pulsera y salud" />
         <NavRow to="/settings" icon={<Settings />} label="Ajustes" />
+        {isAdmin && (
+          <NavRow
+            to="/access"
+            icon={<KeyRound />}
+            label="Accesos"
+            hint={
+              waiting.length
+                ? `${waiting.length} ${waiting.length === 1 ? 'pendiente' : 'pendientes'}`
+                : undefined
+            }
+          />
+        )}
       </ul>
 
       <ul className="mt-6 divide-y divide-line border-y border-line">

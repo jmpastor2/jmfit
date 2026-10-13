@@ -241,10 +241,39 @@ class Query implements PromiseLike<Result> {
   }
 }
 
+/** `access_requests()`: every access row with a name and an email, pending first. */
+function accessRequests(db: Store, user: { id: string; email: string }): Row[] {
+  return (db.access ?? [])
+    .map((a): Row => {
+      const profile = db.profiles?.find((p) => p.id === a.user_id)
+      const email = String(a.email ?? (a.user_id === user.id ? user.email : ''))
+      return {
+        ...a,
+        email,
+        display_name: String(a.display_name ?? profile?.display_name ?? email.split('@')[0]),
+      }
+    })
+    .toSorted((x, y) => Number(y.status === 'pending') - Number(x.status === 'pending'))
+}
+
+function decideAccess(db: Store, args: Record<string, unknown>): Result {
+  const row = (db.access ?? []).find((a) => a.user_id === args.p_user)
+  if (!row) return { data: null, error: { message: 'not_found' } }
+  row.status = args.p_status
+  row.decided_at = args.p_status === 'pending' ? null : nowIso()
+  return { data: null, error: null }
+}
+
 export function createFakeSupabase(db: Store, user: { id: string; email: string }): TypedSupabase {
   const session = { user, access_token: 'lab' }
   const client = {
     from: (table: string) => new Query(db, table),
+    rpc: async (name: string, args: Record<string, unknown> = {}): Promise<Result> =>
+      name === 'access_requests'
+        ? { data: accessRequests(db, user), error: null }
+        : name === 'decide_access'
+          ? decideAccess(db, args)
+          : { data: null, error: { message: `rpc ${name} not faked` } },
     functions: {
       invoke: async () => ({ data: null, error: { message: 'not_configured' } }),
     },

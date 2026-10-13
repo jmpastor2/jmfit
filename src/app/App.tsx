@@ -32,6 +32,7 @@ const GoalsPage = named(() => import('@/features/goals/GoalsPage'), 'GoalsPage')
 const GymPage = named(() => import('@/features/gym/GymPage'), 'GymPage')
 const MachinePage = named(() => import('@/features/gym/MachinePage'), 'MachinePage')
 const SettingsPage = named(() => import('@/features/settings/SettingsPage'), 'SettingsPage')
+const AccessPage = named(() => import('@/features/access/AccessPage'), 'AccessPage')
 const HealthConnectPage = named(
   () => import('@/features/settings/HealthConnectPage'),
   'HealthConnectPage',
@@ -66,6 +67,7 @@ export const router = createHashRouter([
       { path: 'm/:machineId', element: page(<MachinePage />) },
       { path: 'settings', element: page(<SettingsPage />) },
       { path: 'settings/health', element: page(<HealthConnectPage />) },
+      { path: 'access', element: page(<AccessPage />) },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },
