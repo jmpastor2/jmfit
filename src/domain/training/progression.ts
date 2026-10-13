@@ -375,7 +375,11 @@ export function recommend(input: RecommendInput): Recommendation {
   }
 
   /* 6. Chase reps at the same load */
-  const goal = Array.from({ length: slot.sets }, (_, i) => Math.min(repsAt(i) + 1, slot.repMax))
+  // Sets the last session did not reach (one top set after a pyramid) start at the bottom of the
+  // range: +1 on reps never done would ask for more than was ever done at this load.
+  const goal = Array.from({ length: slot.sets }, (_, i) =>
+    i < lastReps.length ? Math.min(repsAt(i) + 1, slot.repMax) : slot.repMin,
+  )
   const sameLoad = Array.from({ length: slot.sets }, (_, i) => weightAt(i)).every((w) => w === top)
   const load = sameLoad ? loadText(top, isBw) : 'las mismas cargas'
   return finish(

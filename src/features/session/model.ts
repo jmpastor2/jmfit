@@ -57,9 +57,25 @@ export function historyFor(
   return [...byWorkout.entries()]
     .map(([wid, list]) => ({
       date: finished.get(wid)!.startedAt,
-      sets: list.sort((a, b) => a.setIndex - b.setIndex),
+      sets: topSets(list.toSorted((a, b) => a.setIndex - b.setIndex)),
     }))
+    .filter((h) => h.sets.length > 0)
     .sort((a, b) => b.date.localeCompare(a.date))
+}
+
+/** A set this much lighter than the heaviest of its session was a ramp-up or a drop set. */
+export const TOP_SET_RATIO = 0.85
+
+/**
+ * The working sets of one session. People often ramp up (30 → 40 → 50 → 60 kg) and log every
+ * step as a work set, or finish with a lighter drop set: copying that pyramid into the next
+ * session (plus warm-ups on top) made no sense. Only the sets within 85 % of the heaviest load
+ * count; the rest are re-labelled as warm-ups. Bodyweight sets (no load) are all kept.
+ */
+export function topSets(sets: readonly LoggedSet[]): LoggedSet[] {
+  const max = Math.max(0, ...sets.map((s) => s.weight ?? 0))
+  if (max <= 0) return [...sets]
+  return sets.filter((s) => (s.weight ?? 0) >= max * TOP_SET_RATIO)
 }
 
 export interface RowState {
@@ -112,11 +128,22 @@ export function buildBlock(args: {
   const rows: RowState[] = []
   recommendation.warmups.forEach((t, i) => rows.push({ target: t, done: warm[i] ?? null }))
   // Extra warm-ups logged beyond the suggested ramp.
-  warm
-    .slice(recommendation.warmups.length)
-    .forEach((s) =>
-      rows.push({ target: { ...recommendation.warmups[0]!, setIndex: s.setIndex }, done: s }),
-    )
+  warm.slice(recommendation.warmups.length).forEach((s) =>
+    rows.push({
+      // Ramp-up sets marked by hand may come with no suggested ramp to copy the target from.
+      target: recommendation.warmups[0]
+        ? { ...recommendation.warmups[0], setIndex: s.setIndex }
+        : {
+            setIndex: s.setIndex,
+            kind: 'warmup',
+            weight: s.weight,
+            repMin: s.reps ?? 0,
+            repMax: s.reps ?? 0,
+            rir: 5,
+          },
+      done: s,
+    }),
+  )
 
   let previous: LoggedSet | null = null
   const workTargets = recommendation.work

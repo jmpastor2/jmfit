@@ -280,13 +280,14 @@ describe('recommend · add_reps', () => {
     expect(r.work.map((w) => w.repMin)).toEqual([12, 12, 12])
   })
 
-  it('fills missing sets with the last set done', () => {
+  it('starts the sets not done last time at the bottom of the range', () => {
     const r = recommend({
       slot: slot({ sets: 4, repMax: 12 }),
       exercise: bench,
       history: [session('d', [set(80, 9), set(80, 8)])],
     })
-    expect(r.work.map((w) => w.repMin)).toEqual([10, 9, 9, 9])
+    // repMin of the helper slot is 8: two sets were done, the other two start at 8.
+    expect(r.work.map((w) => w.repMin)).toEqual([10, 9, 8, 8])
   })
 
   it('keeps per-set loads when they differ', () => {

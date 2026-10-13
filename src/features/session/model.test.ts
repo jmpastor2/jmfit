@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { WorkoutFull } from '@/data/rows'
 import type { Exercise, LoggedSet, Slot } from '@/domain/types'
-import { buildBlock, historyFor, nextSetIndex } from './model'
+import { buildBlock, historyFor, nextSetIndex, topSets } from './model'
 import { mesoWeek, dayForDate } from './useStartWorkout'
 
 const bench: Exercise = {
@@ -200,5 +200,45 @@ describe('dayForDate', () => {
       archived: false,
     }
     expect(dayForDate(p, new Set(['a']))?.id).toBe('b')
+  })
+})
+
+describe('topSets', () => {
+  const ramp = (w: number, r: number, i: number) => set('w', i, w, r)
+  it('keeps the heavy sets of a pyramid and drops the ramp and drop sets', () => {
+    const sets = [ramp(30, 14, 0), ramp(40, 10, 1), ramp(50, 8, 2), ramp(60, 6, 3), ramp(45, 10, 4)]
+    expect(topSets(sets).map((s) => s.weight)).toEqual([60])
+  })
+  it('keeps straight sets and close ones', () => {
+    const sets = [ramp(80, 10, 0), ramp(80, 9, 1), ramp(72.5, 10, 2)]
+    expect(topSets(sets)).toHaveLength(3)
+  })
+  it('keeps bodyweight sets without load', () => {
+    expect(topSets([ramp(0, 10, 0), ramp(0, 9, 1)])).toHaveLength(2)
+  })
+})
+
+describe('historyFor with a pyramid', () => {
+  it('recommends from the top set, with warm-ups below it', () => {
+    const workouts = [workout('p', '2026-10-12T18:00:00Z')]
+    const sets = [30, 40, 50, 60].map((w, i) => ({
+      ...set('p', i, w, [14, 10, 8, 6][i]!, 2),
+      id: `p-${i}`,
+    }))
+    const h = historyFor('bench-press', sets, workouts, null)
+    expect(h[0]!.sets.map((s) => s.weight)).toEqual([60])
+    const b = buildBlock({
+      index: 0,
+      slot: { ...slot, repMin: 6, repMax: 8, sets: 4 },
+      exercise: bench,
+      history: h,
+      logged: [],
+      deload: false,
+      readiness: 'normal',
+      bodyweight: 79,
+    })
+    const work = b.rows.filter((r) => r.target.kind !== 'warmup')
+    expect(work.every((r) => r.target.weight === 60)).toBe(true)
+    expect(b.rows.some((r) => r.target.kind === 'warmup')).toBe(true)
   })
 })

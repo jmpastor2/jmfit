@@ -123,15 +123,19 @@ function Session({ workout }: { workout: WorkoutFull }) {
       exerciseId: block.exercise.id,
       exerciseIndex: block.index,
       setIndex: nextSetIndex(logged, block.index),
-      kind: row.target.kind,
+      kind: values.ramp ? 'warmup' : row.target.kind,
       weight: values.weight,
       reps: values.reps,
-      rir: row.target.kind === 'warmup' ? null : values.rir,
+      rir: row.target.kind === 'warmup' || values.ramp ? null : values.rir,
       doneAt: nowIso(),
     }
     const prs = set.kind === 'warmup' ? [] : detectPRs(set, prior(set.exerciseId, set.id))
     const isLastWork = set.kind !== 'warmup' && block.doneWork + 1 >= block.plannedWork
-    const rest = set.kind === 'warmup' ? Math.min(60, block.slot.restSec) : block.slot.restSec
+    // Ramp-up sets before a heavy top set get a little more than a plain warm-up.
+    const rest =
+      set.kind === 'warmup'
+        ? Math.min(values.ramp ? 90 : 60, block.slot.restSec)
+        : block.slot.restSec
     // Superset: go straight to the partner exercise; the rest comes after the partner's set.
     const partner =
       set.kind !== 'warmup' && block.slot.superset
@@ -390,6 +394,8 @@ interface SetValues {
   weight: number | null
   reps: number | null
   rir: number | null
+  /** Marked as a ramp-up set: logged as a warm-up, does not use up a work set. */
+  ramp?: boolean
 }
 
 function ExerciseCard({
@@ -713,6 +719,9 @@ function ActiveSet({
   const [weight, setWeight] = useState(t.weight == null ? '' : formatNumber(t.weight))
   const [reps, setReps] = useState(String(t.repMax === t.repMin ? t.repMin : t.repMin))
   const [rir, setRir] = useState<number | null>(t.kind === 'warmup' ? null : t.rir)
+  // Ramp-up set toggle: only offered on work sets of loaded, untimed exercises.
+  const [ramp, setRamp] = useState(false)
+  const canRamp = t.kind !== 'warmup' && !exercise.timed
   const [busy, setBusy] = useState(false)
 
   const w = parseNum(weight)
@@ -760,7 +769,36 @@ function ActiveSet({
           />
         </div>
       )}
-      {t.kind !== 'warmup' && !exercise.timed && (
+      {canRamp && (
+        <button
+          type="button"
+          role="switch"
+          aria-checked={ramp}
+          onClick={() => setRamp(!ramp)}
+          className="mt-3 flex min-h-11 w-full items-center justify-between gap-3 text-left"
+        >
+          <span>
+            <span className="spec block">Aproximación</span>
+            <span className="block text-[12px] text-muted">
+              Serie de subida de peso: no cuenta como serie de trabajo
+            </span>
+          </span>
+          <span
+            className={clsx(
+              'relative h-7 w-12 shrink-0 rounded-full border transition',
+              ramp ? 'border-gold bg-gold' : 'border-line bg-panel-2',
+            )}
+          >
+            <span
+              className={clsx(
+                'absolute top-0.5 size-[22px] rounded-full transition-[left]',
+                ramp ? 'left-[22px] bg-signal-ink' : 'left-0.5 bg-ink-2',
+              )}
+            />
+          </span>
+        </button>
+      )}
+      {t.kind !== 'warmup' && !exercise.timed && !ramp && (
         <div className="mt-3">
           <div className="mb-1.5 flex items-baseline justify-between">
             <span className="spec">Reps en recámara</span>
@@ -804,8 +842,12 @@ function ActiveSet({
           setBusy(true)
           try {
             await onLog(
-              exercise.timed ? { weight: null, reps: r, rir: null } : { weight: w, reps: r, rir },
+              exercise.timed
+                ? { weight: null, reps: r, rir: null }
+                : { weight: w, reps: r, rir: ramp ? null : rir, ramp },
             )
+            // One ramp set at a time: the next set starts as a work set again.
+            setRamp(false)
           } finally {
             setBusy(false)
           }
