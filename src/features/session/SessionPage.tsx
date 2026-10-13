@@ -7,6 +7,7 @@ import {
   MoreHorizontal,
   PlayCircle,
   Plus,
+  Pencil,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
@@ -23,6 +24,7 @@ import { useExerciseLookup } from '@/features/exercise/lookup'
 import { TechniqueSheet } from '@/features/exercise/TechniqueSheet'
 import { useReadiness } from '@/features/today/useReadiness'
 import { useNow } from '@/lib/useNow'
+import { EditSetSheet } from './EditSetSheet'
 import { FinishSheet } from './FinishSheet'
 import {
   buildBlock,
@@ -103,6 +105,7 @@ function Session({ workout }: { workout: WorkoutFull }) {
     [workout, lookup, sets, workouts, logged, readiness.level],
   )
 
+  const inSession = useMemo(() => new Set(workout.plan.map((s) => s.exerciseId)), [workout.plan])
   const firstOpen = blocks.findIndex((b) => b.doneWork < b.plannedWork)
   const [focus, setFocus] = useState<number | null>(firstOpen === -1 ? null : firstOpen)
   const [picker, setPicker] = useState<{ mode: 'add' } | { mode: 'swap'; index: number } | null>(
@@ -170,10 +173,41 @@ function Session({ workout }: { workout: WorkoutFull }) {
   }
 
   const swapExercise = async (index: number, e: Exercise) => {
-    const plan = workout.plan.map((s, i) =>
-      i === index ? { ...s, exerciseId: e.id, restSec: e.restSec } : s,
-    )
+    const slot = workout.plan[index]
+    if (!slot) return
+    const mine = logged.filter((s) => s.exerciseIndex === index)
+    const doneWork = mine.filter((s) => s.kind !== 'warmup').length
+    if (doneWork === 0) {
+      // Nothing but warm-ups (or nothing): swap in place; those warm-ups were for the old one.
+      const plan = workout.plan.map((s, i) =>
+        i === index ? { ...s, exerciseId: e.id, restSec: e.restSec } : s,
+      )
+      await saveWorkout({ ...workout, plan })
+      await deleteSets(mine.map((s) => s.id))
+      return
+    }
+    // Work sets already done stay with the exercise they were done on; the replacement comes
+    // right after it with the sets that were left, and later exercises move down one place.
+    const kept = { ...slot, sets: doneWork }
+    const replacement = {
+      ...slot,
+      id: newId(),
+      exerciseId: e.id,
+      restSec: e.restSec,
+      sets: Math.max(1, slot.sets - doneWork),
+    }
+    const plan = [
+      ...workout.plan.slice(0, index),
+      kept,
+      replacement,
+      ...workout.plan.slice(index + 1),
+    ]
+    const moved = logged
+      .filter((s) => s.exerciseIndex > index)
+      .map((s) => ({ ...s, exerciseIndex: s.exerciseIndex + 1 }))
+    setFocus(index + 1)
     await saveWorkout({ ...workout, plan })
+    await saveSets(moved)
   }
 
   const addSet = async (index: number) => {
@@ -230,6 +264,8 @@ function Session({ workout }: { workout: WorkoutFull }) {
               onSwap={() => setPicker({ mode: 'swap', index: b.index })}
               onAddSet={() => addSet(b.index)}
               onRemove={() => removeExercise(b.index)}
+              onEditSet={(set) => saveSets([set])}
+              onDeleteSet={(set) => deleteSets([set.id])}
               barKg={me.barKg}
               plates={me.platesKg}
               allSets={sets}
@@ -262,6 +298,7 @@ function Session({ workout }: { workout: WorkoutFull }) {
         onClose={() => setPicker(null)}
         title={picker?.mode === 'swap' ? 'Cambiar ejercicio' : 'Añadir ejercicio'}
         {...(picker?.mode === 'swap' ? { suggestFor: blocks[picker.index]?.exercise } : {})}
+        exclude={inSession}
         onPick={(e) => {
           if (picker?.mode === 'swap') void swapExercise(picker.index, e)
           else void addExercise(e)
@@ -364,6 +401,8 @@ function ExerciseCard({
   onSwap,
   onAddSet,
   onRemove,
+  onEditSet,
+  onDeleteSet,
   barKg,
   plates,
   allSets,
@@ -376,6 +415,8 @@ function ExerciseCard({
   onSwap: () => void
   onAddSet: () => void
   onRemove: () => void
+  onEditSet: (set: LoggedSet) => Promise<void>
+  onDeleteSet: (set: LoggedSet) => Promise<void>
   barKg: number
   plates: number[]
   allSets: LoggedSet[]
@@ -383,6 +424,7 @@ function ExerciseCard({
   const { exercise, recommendation, rows, doneWork, plannedWork } = block
   const [technique, setTechnique] = useState(false)
   const [menu, setMenu] = useState(false)
+  const [editing, setEditing] = useState<{ set: LoggedSet; label: string } | null>(null)
   const complete = plannedWork > 0 && doneWork >= plannedWork
   const activeRow = rows.findIndex((r) => !r.done)
   const best = useMemo(() => {
@@ -505,6 +547,7 @@ function ExerciseCard({
                   row={row}
                   label={rowLabel(rows, i)}
                   timed={Boolean(exercise.timed)}
+                  onEdit={(set) => setEditing({ set, label: rowLabel(rows, i) })}
                 />
               ),
             )}
@@ -518,6 +561,14 @@ function ExerciseCard({
       )}
 
       <TechniqueSheet exercise={exercise} open={technique} onClose={() => setTechnique(false)} />
+      <EditSetSheet
+        set={editing?.set ?? null}
+        label={editing?.label ?? ''}
+        exercise={exercise}
+        onClose={() => setEditing(null)}
+        onSave={onEditSet}
+        onDelete={onDeleteSet}
+      />
       <Sheet open={menu} onClose={() => setMenu(false)} title={exercise.name}>
         <div className="flex flex-col gap-2 pb-2">
           <Button
@@ -573,42 +624,66 @@ function targetText(t: SetTarget, timed = false): string {
 }
 
 /** A set already done, or one still waiting behind the active one. */
-function SetLine({ row, label, timed }: { row: RowState; label: string; timed: boolean }) {
+function SetLine({
+  row,
+  label,
+  timed,
+  onEdit,
+}: {
+  row: RowState
+  label: string
+  timed: boolean
+  onEdit: (set: LoggedSet) => void
+}) {
   const done = row.done
   const warm = row.target.kind === 'warmup'
-  return (
-    <li className="flex min-h-12 items-center gap-3 border-b border-line last:border-0">
-      <span
-        className={clsx(
-          'readout w-7 text-[16px]',
-          warm ? 'text-muted' : done ? 'text-gold' : 'text-ink-2',
-        )}
-      >
-        {label}
-      </span>
-      {done ? (
-        <>
-          {timed ? (
-            <span className="readout flex-1 text-[19px] font-semibold">
-              {done.reps ?? '—'}
-              <span className="ml-1 font-sans text-[12px] font-medium text-muted">s</span>
-            </span>
-          ) : (
-            <span className="readout flex-1 text-[19px] font-semibold">
-              {kg(done.weight)}
-              <span className="ml-1 font-sans text-[12px] font-medium text-muted">kg</span>
-              <span className="mx-2 text-muted">×</span>
-              {done.reps ?? '—'}
-            </span>
-          )}
-          {done.rir != null && (
-            <span className="text-[12.5px] text-muted">RIR {formatNumber(done.rir)}</span>
-          )}
-          <Check className="size-4 text-gold" strokeWidth={2.5} />
-        </>
-      ) : (
-        <span className="flex-1 text-[13.5px] text-muted">{targetText(row.target, timed)}</span>
+  const number = (
+    <span
+      className={clsx(
+        'readout w-7 shrink-0 text-[16px]',
+        warm ? 'text-muted' : done ? 'text-gold' : 'text-ink-2',
       )}
+    >
+      {label}
+    </span>
+  )
+  if (!done) {
+    return (
+      <li className="flex min-h-12 items-center gap-3 border-b border-line last:border-0">
+        {number}
+        <span className="flex-1 text-[13.5px] text-muted">{targetText(row.target, timed)}</span>
+      </li>
+    )
+  }
+  // A logged set is a button: tap it to fix the weight, the reps or the RIR, or remove it.
+  return (
+    <li className="border-b border-line last:border-0">
+      <button
+        type="button"
+        onClick={() => onEdit(done)}
+        aria-label={`Editar serie ${label}`}
+        className="flex min-h-12 w-full items-center gap-3 text-left active:bg-panel-2"
+      >
+        {number}
+        {timed ? (
+          <span className="readout flex-1 text-[19px] font-semibold">
+            {done.reps ?? '—'}
+            <span className="ml-1 font-sans text-[12px] font-medium text-muted">s</span>
+          </span>
+        ) : (
+          <span className="readout flex-1 text-[19px] font-semibold">
+            {kg(done.weight)}
+            <span className="ml-1 font-sans text-[12px] font-medium text-muted">kg</span>
+            <span className="mx-2 text-muted">×</span>
+            {done.reps ?? '—'}
+          </span>
+        )}
+        {done.rir != null && (
+          <span className="text-[12.5px] text-muted">RIR {formatNumber(done.rir)}</span>
+        )}
+        <Pencil className="size-3.5 text-muted" aria-hidden />
+        <Check className="size-4 text-gold" strokeWidth={2.5} />
+      </button>
     </li>
   )
 }
