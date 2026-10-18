@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { WorkoutFull } from '@/data/rows'
 import type { Exercise, LoggedSet, Slot } from '@/domain/types'
-import { buildBlock, historyFor, nextSetIndex, topSets } from './model'
+import { buildBlock, historyFor, nextSetIndex, quickFill, topSets } from './model'
 import { mesoWeek, dayForDate } from './useStartWorkout'
 
 const bench: Exercise = {
@@ -240,5 +240,80 @@ describe('historyFor with a pyramid', () => {
     const work = b.rows.filter((r) => r.target.kind !== 'warmup')
     expect(work.every((r) => r.target.weight === 60)).toBe(true)
     expect(b.rows.some((r) => r.target.kind === 'warmup')).toBe(true)
+  })
+})
+
+describe('quickFill', () => {
+  const history = [
+    {
+      date: '2026-09-27T18:00:00Z',
+      sets: [set('b', 0, 80, 10), set('b', 1, 80, 10), set('b', 2, 80, 10)],
+    },
+  ]
+  const now = new Date('2026-10-18T19:00:00Z')
+  it('copies the last work set into every pending one', () => {
+    const logged = [set('now', 0, 82.5, 9, 2)]
+    const b = buildBlock({
+      index: 0,
+      slot,
+      exercise: bench,
+      history,
+      logged,
+      deload: false,
+      readiness: 'normal',
+      bodyweight: 78,
+    })
+    const q = quickFill(b, 'now', logged, now)!
+    expect(q.source).toBe('last')
+    expect(q.sets).toHaveLength(2)
+    expect(q.sets.every((s) => s.weight === 82.5 && s.reps === 9 && s.kind === 'work')).toBe(true)
+    expect(q.sets.map((s) => s.setIndex)).toEqual([1, 2])
+    expect(q.summary).toBe('2 × 82,5 kg × 9')
+  })
+  it('uses the prescription when nothing is done yet', () => {
+    const b = buildBlock({
+      index: 0,
+      slot,
+      exercise: bench,
+      history,
+      logged: [],
+      deload: false,
+      readiness: 'normal',
+      bodyweight: 78,
+    })
+    const q = quickFill(b, 'now', [], now)!
+    expect(q.source).toBe('target')
+    expect(q.sets).toHaveLength(3)
+    expect(q.sets[0]!.weight).toBe(82.5)
+  })
+  it('keeps the target reps of each set from the prescription', () => {
+    const pyramid = [{ date: '2026-10-12T18:00:00Z', sets: [set('p', 0, 60, 6, 1)] }]
+    const s4 = { ...slot, sets: 4, repMin: 6, repMax: 8 }
+    const b = buildBlock({
+      index: 0,
+      slot: s4,
+      exercise: bench,
+      history: pyramid,
+      logged: [],
+      deload: false,
+      readiness: 'normal',
+      bodyweight: 79,
+    })
+    const q = quickFill(b, 'now', [], now)!
+    expect(q.sets.map((x) => x.reps)).toEqual([7, 6, 6, 6])
+    expect(q.summary).toBe('60 kg (7-6-6-6)')
+  })
+  it('gives up without a weight to log on a loaded exercise', () => {
+    const b = buildBlock({
+      index: 0,
+      slot,
+      exercise: bench,
+      history: [],
+      logged: [],
+      deload: false,
+      readiness: 'normal',
+      bodyweight: 78,
+    })
+    expect(quickFill(b, 'now', [], now)).toBeNull()
   })
 })

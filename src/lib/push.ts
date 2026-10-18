@@ -100,7 +100,10 @@ export async function enablePush(): Promise<void> {
     await sub.unsubscribe()
     sub = null
   }
-  sub ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: serverKey })
+  sub ??= await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: serverKey,
+  })
 
   const json = sub.toJSON()
   const { error } = await requireSupabase()

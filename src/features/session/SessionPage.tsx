@@ -9,13 +9,21 @@ import {
   Plus,
   Pencil,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Sheet } from '@/components/ui/Sheet'
 import { useToast } from '@/components/ui/Toast'
 import { MUSCLE_LABEL } from '@/content/exercises'
-import { useActiveWorkout, useMe, useSets, useTrainingActions, useWorkouts } from '@/data/hooks'
+import {
+  useActiveProgram,
+  useActiveWorkout,
+  useMe,
+  useProgramActions,
+  useSets,
+  useTrainingActions,
+  useWorkouts,
+} from '@/data/hooks'
 import type { WorkoutFull } from '@/data/rows'
 import { detectPRs, estimate1RM, formatNumber, platesPerSide } from '@/domain/training'
 import type { Exercise, LoggedSet, PersonalRecord, SetKind, SetTarget } from '@/domain/types'
@@ -26,6 +34,7 @@ import { useReadiness } from '@/features/today/useReadiness'
 import { useNow } from '@/lib/useNow'
 import { EditSetSheet } from './EditSetSheet'
 import { FinishSheet } from './FinishSheet'
+import { QuickCheckin } from './QuickCheckin'
 import {
   buildBlock,
   historyFor,
@@ -34,6 +43,8 @@ import {
   slotFor,
   type ExerciseBlock,
   type RowState,
+  quickFill,
+  type QuickFill,
 } from './model'
 import { RestPanel } from './RestPanel'
 import { fmtClock, restTimer, useRestAlarm } from './restTimer'
@@ -63,6 +74,7 @@ const NO_WORKOUTS: WorkoutFull[] = []
 
 /** Event-time clock (sets are stamped when logged, never during render). */
 const nowIso = () => new Date().toISOString()
+const nowDate = () => new Date()
 
 const kg = (n: number | null | undefined) => (n == null ? '—' : formatNumber(n))
 
@@ -70,8 +82,25 @@ export function SessionPage() {
   const workout = useActiveWorkout()
   const workouts = useWorkouts()
   if (workouts.isPending) return null
-  if (!workout) return <Navigate to="/" replace />
+  if (!workout) return <NoActiveSession />
   return <Session key={workout.id} workout={workout} />
+}
+
+/**
+ * No session open: back to Hoy. Not at once: closing a session empties this screen in the same
+ * moment it navigates to the summary, and an immediate redirect used to win that race and send
+ * the person home instead of to the summary.
+ */
+function NoActiveSession() {
+  const nav = useNavigate()
+  const { pathname } = useLocation()
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      if (pathname === '/session') nav('/', { replace: true })
+    }, 150)
+    return () => window.clearTimeout(t)
+  }, [nav, pathname])
+  return null
 }
 
 function Session({ workout }: { workout: WorkoutFull }) {
@@ -83,6 +112,10 @@ function Session({ workout }: { workout: WorkoutFull }) {
   const lookup = useExerciseLookup()
   const readiness = useReadiness()
   const { saveSets, saveWorkout, deleteSets } = useTrainingActions()
+  const { program } = useActiveProgram()
+  // Only shapes the quick-fill previews; the sets themselves are stamped when logged.
+  const renderNow = useNow(60_000)
+  const { save: saveProgram } = useProgramActions()
   useRestAlarm(me.restSound)
 
   const logged = useMemo(() => sets.filter((s) => s.workoutId === workout.id), [sets, workout.id])
@@ -176,9 +209,41 @@ function Session({ workout }: { workout: WorkoutFull }) {
     await saveWorkout({ ...workout, plan })
   }
 
+  /**
+   * The same swap keeps happening (the machine of the plan is always taken, or another one
+   * suits better): offer to make it part of the program, so the next session starts right.
+   */
+  const offerProgramSwap = (slotId: string, from: Exercise, to: Exercise) => {
+    if (!program || workout.programId !== program.id) return
+    const day = program.days.find((d) => d.slots.some((s) => s.id === slotId))
+    if (!day) return
+    toast(`¿Usar ${to.name} siempre en ${day.name}?`, 'info', {
+      action: {
+        label: 'Guardar',
+        onAction: async () => {
+          await saveProgram({
+            ...program,
+            days: program.days.map((d) =>
+              d.id !== day.id
+                ? d
+                : {
+                    ...d,
+                    slots: d.slots.map((s) =>
+                      s.id === slotId ? { ...s, exerciseId: to.id, restSec: to.restSec } : s,
+                    ),
+                  },
+            ),
+          })
+          toast(`${day.name}: ${from.name} → ${to.name}`, 'success')
+        },
+      },
+    })
+  }
+
   const swapExercise = async (index: number, e: Exercise) => {
     const slot = workout.plan[index]
     if (!slot) return
+    offerProgramSwap(slot.id, lookup(slot.exerciseId), e)
     const mine = logged.filter((s) => s.exerciseIndex === index)
     const doneWork = mine.filter((s) => s.kind !== 'warmup').length
     if (doneWork === 0) {
@@ -214,6 +279,17 @@ function Session({ workout }: { workout: WorkoutFull }) {
     await saveSets(moved)
   }
 
+  /** Log every pending work set of an exercise at once (done while resting, or written later). */
+  const fillRemaining = async (block: ExerciseBlock) => {
+    const q = quickFill(block, workout.id, logged, nowDate())
+    if (!q) return
+    const next = blocks.findIndex((b, i) => i > block.index && b.doneWork < b.plannedWork)
+    setFocus(next === -1 ? null : next)
+    const prs = q.sets.flatMap((s) => detectPRs(s, prior(s.exerciseId, s.id)))
+    if (prs.length) toast(prMessage(prs[0]!), 'success')
+    await saveSets(q.sets)
+  }
+
   const addSet = async (index: number) => {
     const plan = workout.plan.map((s, i) => (i === index ? { ...s, sets: s.sets + 1 } : s))
     await saveWorkout({ ...workout, plan })
@@ -245,6 +321,7 @@ function Session({ workout }: { workout: WorkoutFull }) {
         onFinish={() => setFinishing(true)}
       />
       <div className="px-4">
+        <QuickCheckin />
         {workout.deload && (
           <p className="mb-3 border-l-2 border-gold pl-3 text-[13.5px] text-ink-2">
             Semana de descarga: menos series y más margen. Tu cuerpo consolida lo ganado.
@@ -269,6 +346,8 @@ function Session({ workout }: { workout: WorkoutFull }) {
               onAddSet={() => addSet(b.index)}
               onRemove={() => removeExercise(b.index)}
               onEditSet={(set) => saveSets([set])}
+              quick={quickFill(b, workout.id, logged, renderNow)}
+              onQuick={() => fillRemaining(b)}
               onDeleteSet={(set) => deleteSets([set.id])}
               barKg={me.barKg}
               plates={me.platesKg}
@@ -313,6 +392,14 @@ function Session({ workout }: { workout: WorkoutFull }) {
         onClose={() => setFinishing(false)}
         workout={workout}
         logged={logged}
+        pending={blocks
+          .filter((b) => b.plannedWork > 0 && b.doneWork === 0)
+          .map((b) => ({
+            key: `${b.index}-${b.exercise.id}`,
+            name: b.exercise.name,
+            summary: quickFill(b, workout.id, logged, renderNow)?.summary ?? null,
+            onLog: () => fillRemaining(b),
+          }))}
       />
     </div>
   )
@@ -409,6 +496,8 @@ function ExerciseCard({
   onRemove,
   onEditSet,
   onDeleteSet,
+  quick,
+  onQuick,
   barKg,
   plates,
   allSets,
@@ -423,6 +512,8 @@ function ExerciseCard({
   onRemove: () => void
   onEditSet: (set: LoggedSet) => Promise<void>
   onDeleteSet: (set: LoggedSet) => Promise<void>
+  quick: QuickFill | null
+  onQuick: () => Promise<void>
   barKg: number
   plates: number[]
   allSets: LoggedSet[]
@@ -558,10 +649,27 @@ function ExerciseCard({
               ),
             )}
           </ul>
-          {activeRow === -1 && (
+          {activeRow === -1 ? (
             <button type="button" onClick={onAddSet} className="spec tap-link mt-3 block text-gold">
               + Añadir serie
             </button>
+          ) : (
+            quick && (
+              <button
+                type="button"
+                onClick={() => void onQuick()}
+                className="mt-2 flex min-h-11 w-full items-center justify-between gap-3 text-left"
+              >
+                <span className="text-[13px] text-ink-2">
+                  {quick.source === 'last'
+                    ? 'Registrar las que quedan igual que la última'
+                    : 'Registrar todas según el objetivo'}
+                </span>
+                <span className="readout shrink-0 text-[16px] font-semibold text-gold">
+                  {quick.summary}
+                </span>
+              </button>
+            )
           )}
         </div>
       )}

@@ -21,22 +21,34 @@ const RPE_HINT: Record<number, string> = {
 }
 
 /** Close the session: how hard it felt, bodyweight, a note. An empty session can be discarded. */
+export interface PendingExercise {
+  key: string
+  name: string
+  /** What one tap would log («3 × 60 kg × 10»), or null when there is no weight to copy. */
+  summary: string | null
+  onLog: () => Promise<void>
+}
+
 export function FinishSheet({
   open,
   onClose,
   workout,
   logged,
+  pending = [],
 }: {
   open: boolean
   onClose: () => void
   workout: WorkoutFull
   logged: LoggedSet[]
+  /** Planned exercises with no work set logged: done but not written down, or skipped. */
+  pending?: PendingExercise[]
 }) {
   const nav = useNavigate()
   const { toast } = useToast()
   const { saveWorkout, deleteWorkout } = useTrainingActions()
   const [rpe, setRpe] = useState<number | null>(null)
-  const [bw, setBw] = useState(workout.bodyweight == null ? '' : formatNumber(workout.bodyweight))
+  // Empty on purpose: a weight copied from the last session made the body-weight trend flat.
+  const [bw, setBw] = useState('')
   const [notes, setNotes] = useState(workout.notes ?? '')
   const [busy, setBusy] = useState(false)
   const workSets = logged.filter((s) => s.kind !== 'warmup').length
@@ -48,7 +60,8 @@ export function FinishSheet({
     const ended = { ...workout }
     ended.endedAt = new Date().toISOString()
     ended.sessionRpe = rpe
-    ended.bodyweight = bw.trim() && Number.isFinite(weight) ? weight : workout.bodyweight
+    // Only a weight typed today is stored; nothing typed means not weighed.
+    ended.bodyweight = bw.trim() && Number.isFinite(weight) && weight > 0 ? weight : null
     ended.notes = notes.trim() || null
     // The cache is updated synchronously inside saveWorkout, so the summary opens on a closed session.
     const saving = saveWorkout(ended)
@@ -87,6 +100,32 @@ export function FinishSheet({
       }
     >
       <div className="flex flex-col gap-5">
+        {pending.length > 0 && (
+          <section>
+            <h3 className="spec mb-1 text-warn">Sin registrar</h3>
+            <p className="mb-2 text-[12.5px] text-muted">
+              Si los hiciste, apúntalos de un toque; si no, quedan como saltados.
+            </p>
+            <ul className="divide-y divide-line border-y border-line">
+              {pending.map((p) => (
+                <li key={p.key} className="flex min-h-12 items-center justify-between gap-3 py-1">
+                  <span className="min-w-0 text-[14.5px]">{p.name}</span>
+                  {p.summary ? (
+                    <button
+                      type="button"
+                      onClick={() => void p.onLog()}
+                      className="shrink-0 rounded-[8px] border border-gold/60 px-3 py-2 text-[12.5px] font-semibold text-gold"
+                    >
+                      Lo hice · {p.summary}
+                    </button>
+                  ) : (
+                    <span className="shrink-0 text-[12px] text-muted">Ábrelo para apuntarlo</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         <div>
           <div className="mb-2 flex items-baseline justify-between">
             <span className="spec">Esfuerzo de la sesión</span>
@@ -110,13 +149,21 @@ export function FinishSheet({
             ))}
           </div>
         </div>
-        <Field label="Peso corporal hoy" hint="Opcional: afina los ejercicios con tu propio peso">
+        <Field
+          label="Peso corporal hoy"
+          hint={
+            workout.bodyweight != null
+              ? `Si te has pesado. El último fue ${formatNumber(workout.bodyweight)} kg.`
+              : 'Si te has pesado: alimenta la tendencia de peso en Cuerpo.'
+          }
+        >
           {(id) => (
             <Input
               id={id}
               inputMode="decimal"
               value={bw}
               onChange={(e) => setBw(e.target.value)}
+              placeholder={workout.bodyweight != null ? formatNumber(workout.bodyweight) : ''}
               suffix="kg"
             />
           )}

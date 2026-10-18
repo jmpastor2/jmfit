@@ -35,6 +35,7 @@ import {
   workoutMinutes,
 } from '@/features/train/history'
 import { useNow } from '@/lib/useNow'
+import { dailyWeights, weightEntries, weightSourceLabel } from '@/features/body/weight'
 import { CheckinSheet } from './CheckinSheet'
 import {
   SCAN_STALE_DAYS,
@@ -50,6 +51,7 @@ import {
   weekSummary,
 } from './today'
 import { useReadiness } from './useReadiness'
+import { WeekWarnings } from './WeekWarnings'
 
 export function TodayPage() {
   const me = useMe()
@@ -72,7 +74,7 @@ export function TodayPage() {
       />
       <TodayWorkout program={program} now={now} />
       <ReadinessBlock />
-      <WeekBlock now={now} weeklyTarget={me.weeklyTarget} />
+      <WeekBlock now={now} weeklyTarget={me.weeklyTarget} program={program} />
       <RecordsBlock now={now} />
       <BodyBlock now={now} />
       <GoalsBlock now={now} />
@@ -107,11 +109,21 @@ function Block({
   )
 }
 
+/** Last known bodyweight, from a finished session or a scan, whichever is more recent. */
+function useLatestWeight() {
+  const workouts = useWorkouts().data
+  const scans = useScans().data
+  return useMemo(
+    () => dailyWeights(weightEntries(workouts ?? [], scans ?? [])).at(-1) ?? null,
+    [workouts, scans],
+  )
+}
+
 /** Exercise id → exercise for tonnage of bodyweight exercises. */
 function useTonnageOptions() {
   const lookup = useExerciseLookup()
   const sets = useSets().data
-  const bodyweight = useScans().data?.at(-1)?.peso ?? null
+  const bodyweight = useLatestWeight()?.value ?? null
   return useMemo(() => {
     const exercisesById: Record<string, Exercise> = {}
     for (const s of sets ?? [])
@@ -396,7 +408,15 @@ function ReadinessBlock() {
 
 const WEEK_LETTERS = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 
-function WeekBlock({ now, weeklyTarget }: { now: Date; weeklyTarget: number }) {
+function WeekBlock({
+  now,
+  weeklyTarget,
+  program,
+}: {
+  now: Date
+  weeklyTarget: number
+  program: Program | null
+}) {
   const workouts = useWorkouts().data
   const sets = useSets().data
   const opts = useTonnageOptions()
@@ -472,6 +492,7 @@ function WeekBlock({ now, weeklyTarget }: { now: Date; weeklyTarget: number }) {
       <p className="mt-2 text-[12px] text-muted">
         Cambio frente a la semana pasada a estas alturas.
       </p>
+      <WeekWarnings now={now} program={program} />
     </Block>
   )
 }
@@ -523,20 +544,34 @@ function RecordsBlock({ now }: { now: Date }) {
 function BodyBlock({ now }: { now: Date }) {
   const scans = useScans()
   const st = useMemo(() => scanStatus(scans.data ?? [], now), [scans.data, now])
+  const latest = useLatestWeight()
+  // A weight typed after a session that is newer than the last scan replaces the scan's.
+  const newer =
+    latest && latest.source === 'workout' && (!st || latest.date > st.last.date) ? latest : null
   if (scans.isPending) return null
   return (
     <Block title="Cuerpo" link={{ to: '/body', label: 'Ver' }}>
       {st ? (
         <>
           <div className="grid grid-cols-3 gap-3">
-            <ScanKpi
-              label="Peso"
-              unit="kg"
-              scan={st.last}
-              prev={st.previous}
-              pick={(s) => s.peso}
-              good="none"
-            />
+            {newer ? (
+              <Kpi
+                size="sm"
+                label="Peso"
+                value={formatNumber(newer.value, 1)}
+                unit="kg"
+                caption={weightSourceLabel(newer, now)}
+              />
+            ) : (
+              <ScanKpi
+                label="Peso"
+                unit="kg"
+                scan={st.last}
+                prev={st.previous}
+                pick={(s) => s.peso}
+                good="none"
+              />
+            )}
             <ScanKpi
               label="Grasa"
               unit="%"
@@ -563,6 +598,19 @@ function BodyBlock({ now }: { now: Date }) {
               Toca escáner: el último fue hace {st.daysAgo} días.
             </p>
           )}
+        </>
+      ) : newer ? (
+        <>
+          <Kpi
+            size="sm"
+            label="Peso"
+            value={formatNumber(newer.value, 1)}
+            unit="kg"
+            caption={weightSourceLabel(newer, now)}
+          />
+          <p className="mt-3 text-[13.5px] text-muted">
+            Sin escáneres todavía. Añade tu último Boditrax en Cuerpo para seguir grasa y músculo.
+          </p>
         </>
       ) : (
         <p className="text-[13.5px] text-muted">
@@ -638,38 +686,33 @@ function GoalsBlock({ now }: { now: Date }) {
       }),
     [active, sets, scans, sessionsThisWeek],
   )
-  if (goals.isPending) return null
+  // Without active goals the suggestions live in «Esta semana» (WeekWarnings).
+  if (goals.isPending || !rows.length) return null
   return (
     <Block title="Objetivos" link={{ to: '/goals', label: 'Todos' }}>
-      {rows.length ? (
-        <ul className="flex flex-col gap-4">
-          {rows.map(({ goal, current, progress }) => (
-            <li key={goal.id}>
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="min-w-0 break-words text-[14.5px] font-medium">
-                  {goalTitle(goal, goal.exerciseId ? lookup(goal.exerciseId).name : null, (n) =>
-                    formatNumber(n),
-                  )}
-                </span>
-                <span className="readout shrink-0 text-[16px] font-semibold text-ink-2">
-                  {progress != null ? `${Math.round(progress * 100)} %` : '—'}
-                </span>
-              </div>
-              {progress != null && <Meter value={progress} className="mt-2" />}
-              <p className="mt-1 text-[12px] text-muted">
-                {current != null
-                  ? `Ahora: ${formatNumber(current, 1)} ${goalUnit(goal)}`
-                  : 'Sin datos para medirlo todavía.'}
-                {goal.deadline ? ` · fecha límite ${formatShortDate(goal.deadline, now)}` : ''}
-              </p>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-[13.5px] text-muted">
-          Sin objetivos activos. Ponte uno: un 1RM, tu peso o tu grasa, con fecha.
-        </p>
-      )}
+      <ul className="flex flex-col gap-4">
+        {rows.map(({ goal, current, progress }) => (
+          <li key={goal.id}>
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="min-w-0 break-words text-[14.5px] font-medium">
+                {goalTitle(goal, goal.exerciseId ? lookup(goal.exerciseId).name : null, (n) =>
+                  formatNumber(n),
+                )}
+              </span>
+              <span className="readout shrink-0 text-[16px] font-semibold text-ink-2">
+                {progress != null ? `${Math.round(progress * 100)} %` : '—'}
+              </span>
+            </div>
+            {progress != null && <Meter value={progress} className="mt-2" />}
+            <p className="mt-1 text-[12px] text-muted">
+              {current != null
+                ? `Ahora: ${formatNumber(current, 1)} ${goalUnit(goal)}`
+                : 'Sin datos para medirlo todavía.'}
+              {goal.deadline ? ` · fecha límite ${formatShortDate(goal.deadline, now)}` : ''}
+            </p>
+          </li>
+        ))}
+      </ul>
     </Block>
   )
 }

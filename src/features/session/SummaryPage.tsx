@@ -21,6 +21,7 @@ import {
   signed,
 } from '@/features/train/history'
 import { useNow } from '@/lib/useNow'
+import { ProgramSwapsSection } from './ProgramSwaps'
 import {
   changeOf,
   previousSameDay,
@@ -202,6 +203,8 @@ function Summary({ workout, workouts }: { workout: WorkoutFull; workouts: Workou
           </ul>
         </section>
       )}
+
+      <ProgramSwapsSection workout={workout} lookup={lookup} />
 
       <div className="border-t border-line pt-5">
         <Button block size="lg" onClick={() => nav('/', { replace: true })}>

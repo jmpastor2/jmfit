@@ -33,6 +33,15 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   o quitar el acceso; cada solicitud avisa por ntfy.sh (secreto de Vault `access_ntfy_topic`). Admins a
   mano en `public.access.is_admin`. Solo queda la cuenta del usuario; la de prueba, sin acceso.
 
+- 2026-10-18 (revisión del uso real: 5 sesiones en 8 días): los cambios de ejercicio se pueden
+  guardar en el programa (aviso al cambiar y sección «Cambios respecto al programa» en el resumen);
+  «Registrar las que quedan» de un toque (copia la última serie o el objetivo de cada serie); al
+  terminar, «Sin registrar» con «Lo hice» por ejercicio; «¿Cómo llegas hoy?» al empezar (energía y
+  sueño → preparación); peso corporal solo si se escribe (antes se arrastraba el último) y bloque de
+  tendencia de peso en Cuerpo; avisos de la semana en Hoy (músculos por detrás del plan, ejercicios
+  saltados, primer objetivo con cifra y fecha); corregido: al guardar la sesión se volvía a Hoy en vez
+  de ir al resumen.
+
 ## Pendiente
 
 1. Publicar: GitHub → Settings → Pages → Source: **GitHub Actions** (una vez), y push a `main`.

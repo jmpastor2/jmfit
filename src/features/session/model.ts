@@ -197,3 +197,77 @@ export function workSetsOf(logged: readonly LoggedSet[], exerciseIndex: number):
     .filter((s) => s.exerciseIndex === exerciseIndex && s.kind !== 'warmup')
     .sort((a, b) => a.setIndex - b.setIndex)
 }
+
+export interface QuickFill {
+  /** Sets to log, in order. */
+  sets: LoggedSet[]
+  /** What will be logged, for the button: «3 × 60 kg × 10». */
+  summary: string
+  /** Copied from the last set done, or taken from the prescription. */
+  source: 'last' | 'target'
+}
+
+const fmt = (n: number) => String(Math.round(n * 100) / 100).replace('.', ',')
+
+/**
+ * The work sets still pending in a block, ready to log in one tap: the same as the last work
+ * set done, or the prescription when none is done yet (it needs a weight unless the exercise
+ * is bodyweight or held). Null when there is nothing left or nothing sensible to copy.
+ */
+export function quickFill(
+  block: ExerciseBlock,
+  workoutId: string,
+  logged: readonly LoggedSet[],
+  now: Date,
+): QuickFill | null {
+  const pending = block.rows.filter((r) => !r.done && r.target.kind !== 'warmup')
+  if (!pending.length) return null
+  const lastDone = workSetsOf(logged, block.index).at(-1) ?? null
+  const ex = block.exercise
+  // Each pending set: a copy of the last one done, or its own prescription (7-6-6-6 stays so).
+  let values: { weight: number | null; reps: number | null; rir: number | null }[]
+  let source: QuickFill['source']
+  if (lastDone && lastDone.reps != null) {
+    values = pending.map(() => ({
+      weight: lastDone.weight,
+      reps: lastDone.reps,
+      rir: lastDone.rir,
+    }))
+    source = 'last'
+  } else {
+    const firstWeight = pending.find((r) => r.target.weight != null)?.target.weight ?? null
+    values = pending.map((r) => ({
+      weight: ex.timed ? null : (r.target.weight ?? firstWeight),
+      reps: r.target.repMin,
+      rir: ex.timed ? null : r.target.rir,
+    }))
+    source = 'target'
+    if (values.some((v) => v.weight == null) && !ex.bodyweight && !ex.timed) return null
+  }
+  const start = nextSetIndex(logged, block.index)
+  const sets = values.map((v, i) => ({
+    id: newId(),
+    workoutId,
+    exerciseId: ex.id,
+    exerciseIndex: block.index,
+    setIndex: start + i,
+    kind: 'work' as const,
+    ...v,
+    // One second apart keeps their order when sorted by time.
+    doneAt: new Date(now.getTime() + i * 1000).toISOString(),
+  }))
+  const reps = values.map((v) => v.reps ?? 0)
+  const sameReps = reps.every((r) => r === reps[0])
+  const repsText = sameReps ? String(reps[0]) : reps.join('-')
+  const weights = values.map((v) => v.weight)
+  const w = weights[0]
+  const sameWeight = weights.every((x) => x === w)
+  const what = ex.timed
+    ? `${repsText} s`
+    : w == null || (ex.bodyweight && w === 0) || !sameWeight
+      ? `${repsText} reps`
+      : sameReps
+        ? `${fmt(w)} kg × ${repsText}`
+        : `${fmt(w)} kg (${repsText})`
+  return { sets, summary: sameReps ? `${sets.length} × ${what}` : what, source }
+}

@@ -215,6 +215,8 @@ export function GoalsPage() {
           onClose={closeSheet}
           initialKind={isKind(newKind) ? newKind : 'e1rm'}
           initialExercise={params.get('exercise')}
+          initialTarget={params.get('target')}
+          initialDeadline={params.get('deadline')}
           data={data}
           now={now}
           onCreate={async (g) => {
@@ -353,6 +355,8 @@ function GoalSheet({
   onClose,
   initialKind,
   initialExercise,
+  initialTarget = null,
+  initialDeadline = null,
   data,
   now,
   onCreate,
@@ -361,6 +365,9 @@ function GoalSheet({
   onClose: () => void
   initialKind: GoalKind
   initialExercise: string | null
+  /** Prefilled from a suggestion link (`?target=…&deadline=YYYY-MM-DD`). */
+  initialTarget?: string | null
+  initialDeadline?: string | null
   data: GoalData
   now: Date
   onCreate: (g: UserGoal) => Promise<void>
@@ -371,8 +378,15 @@ function GoalSheet({
     initialExercise ? lookup(initialExercise) : null,
   )
   const [reps, setReps] = useState('5')
-  const [target, setTarget] = useState('')
-  const [deadline, setDeadline] = useState('')
+  const [target, setTarget] = useState(() => {
+    const n = Number(initialTarget)
+    return initialTarget && Number.isFinite(n)
+      ? String(Math.round(n * 10) / 10).replace('.', ',')
+      : ''
+  })
+  const [deadline, setDeadline] = useState(() =>
+    initialDeadline && /^\d{4}-\d{2}-\d{2}$/.test(initialDeadline) ? initialDeadline : '',
+  )
   const [picking, setPicking] = useState(false)
   const [busy, setBusy] = useState(false)
 

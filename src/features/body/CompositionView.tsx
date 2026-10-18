@@ -20,6 +20,7 @@ import type { Scan } from '@/domain/types'
 import { useNow } from '@/lib/useNow'
 import { parseBoditraxCsv, type BoditraxParse } from './boditrax'
 import { AddScanSheet, ImportScansSheet } from './ScanSheets'
+import { WeightBlock } from './WeightBlock'
 import {
   CHART_METRICS,
   compareScans,
@@ -112,7 +113,8 @@ export function CompositionView() {
   }
   if (!scans.length) {
     return (
-      <>
+      <div className="flex flex-col gap-6">
+        <WeightBlock />
         <EmptyState
           icon={<Scale className="size-6" />}
           title="Sin escáneres todavía"
@@ -120,12 +122,13 @@ export function CompositionView() {
           action={actions}
         />
         {sheets}
-      </>
+      </div>
     )
   }
 
   return (
     <div className="flex flex-col gap-6">
+      <WeightBlock />
       <Hero scans={scans} />
       {actions}
       <Trend scans={scans} />
