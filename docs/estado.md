@@ -33,6 +33,12 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   o quitar el acceso; cada solicitud avisa por ntfy.sh (secreto de Vault `access_ntfy_topic`). Admins a
   mano en `public.access.is_admin`. Solo queda la cuenta del usuario; la de prueba, sin acceso.
 
+- 2026-10-20: **Orbe** (asistente de casa en jmpserver) lee un resumen de entrenamiento con la función
+  `public.orbe_summary(p_key, p_days)` (migración `20261020000000_orbe_summary.sql`, aplicada): solo cifras
+  agregadas (sesiones, volumen, mejores marcas estimadas, medias de salud y check-ins), nunca series sueltas
+  ni notas. Exige la clave de Orbe; en Vault solo están su SHA-256 (`orbe_key_sha256`) y el usuario
+  (`orbe_user_id`). La clave vive en `/srv/apps/orbe/.env` del servidor.
+
 - 2026-10-18 (revisión del uso real: 5 sesiones en 8 días): los cambios de ejercicio se pueden
   guardar en el programa (aviso al cambiar y sección «Cambios respecto al programa» en el resumen);
   «Registrar las que quedan» de un toque (copia la última serie o el objetivo de cada serie); al
