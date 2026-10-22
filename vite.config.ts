@@ -16,7 +16,8 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       VitePWA({
         registerType: 'prompt',
-        includeAssets: ['icons/*.png', 'icons/*.svg'],
+        // public/icons is already precached by globPatterns; listing the icons again duplicated them.
+        includeManifestIcons: false,
         manifest: {
           id: '/jmfit/',
           name: 'Forja',
@@ -27,7 +28,7 @@ export default defineConfig(({ mode }) => {
           start_url: base,
           scope: base,
           display: 'standalone',
-          orientation: 'portrait',
+          orientation: 'any',
           background_color: '#000000',
           theme_color: '#000000',
           categories: ['fitness', 'health', 'sports'],

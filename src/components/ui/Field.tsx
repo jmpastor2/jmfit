@@ -49,7 +49,7 @@ export function Field({ label, hint, error, trailing, className, children }: Fie
 }
 
 export const controlClass =
-  'h-12 w-full rounded-control border border-line bg-panel-2 px-4 text-[15px] text-ink placeholder:text-muted/70 outline-none transition focus:border-signal/60 focus:bg-panel focus:ring-4 focus:ring-signal/10 disabled:opacity-60'
+  'h-12 w-full rounded-control border border-line bg-panel-2 px-4 text-[16px] text-ink placeholder:text-muted/70 outline-none transition focus:border-signal/60 focus:bg-panel focus:ring-4 focus:ring-signal/10 disabled:opacity-60'
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   suffix?: ReactNode
