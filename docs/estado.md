@@ -48,6 +48,16 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   saltados, primer objetivo con cifra y fecha); corregido: al guardar la sesión se volvía a Hoy en vez
   de ir al resumen.
 
+- 2026-10-22 (escrituras fiables): todas las escrituras van por una sola cola (`scope` común, una a
+  una y en orden, también al reanudar tras cerrar la app); un fallo de red se reintenta con espera
+  creciente durante mucho tiempo y un error real de la base de datos (con `code`) para al momento,
+  avisa y vuelve a leer del servidor, así que nada se muestra como guardado sin estarlo. La sesión
+  no espera a la red para seguir (serie, cambio de ejercicio, quitar); al terminar sin conexión
+  avisa de que se guardará al volver y, si el servidor la rechaza, ofrece «Reintentar». Borrar
+  escáner y archivar objetivo ya pasan por la cola. Días por fecha local (no UTC) en peso corporal
+  y objetivos; zoom permitido y campos a 16 px (iOS no amplía al escribir); Inter solo latin y
+  latin-ext; el manifiesto admite horizontal.
+
 ## Pendiente
 
 1. Publicar: GitHub → Settings → Pages → Source: **GitHub Actions** (una vez), y push a `main`.
