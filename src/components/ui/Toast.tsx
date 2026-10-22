@@ -112,6 +112,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             toast={withAction}
             action={withAction.action}
             dismiss={dismiss}
+            onFail={() => toast('No se pudo completar', 'error')}
           />
         )}
       </div>
@@ -124,14 +125,17 @@ function ActionToast({
   toast,
   action,
   dismiss,
+  onFail,
 }: {
   toast: Toast
   action: ToastAction
   dismiss: (id: number) => void
+  /** The action threw or its promise rejected: say so instead of failing silently. */
+  onFail: () => void
 }) {
   const run = () => {
     dismiss(toast.id)
-    void action.onAction()
+    Promise.resolve().then(action.onAction).catch(onFail)
   }
   return (
     <div

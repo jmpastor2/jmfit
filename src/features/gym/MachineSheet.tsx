@@ -52,14 +52,17 @@ export function MachineSheet({
     if (!canSave) return
     setBusy(true)
     try {
-      await save({
-        id: machine?.id ?? newId(),
-        label: label.trim(),
-        brand: brand.trim() || null,
-        exerciseId,
-        seatSetting: serializeSettings(settings),
-        notes: notes.trim() || null,
-      })
+      await save(
+        {
+          id: machine?.id ?? newId(),
+          label: label.trim(),
+          brand: brand.trim() || null,
+          exerciseId,
+          seatSetting: serializeSettings(settings),
+          notes: notes.trim() || null,
+        },
+        { quiet: true },
+      )
       toast(machine ? 'Máquina actualizada' : 'Máquina añadida', 'success')
       onClose()
     } catch (e) {
@@ -73,7 +76,7 @@ export function MachineSheet({
     if (!machine) return
     setBusy(true)
     try {
-      await remove(machine.id)
+      await remove(machine.id, { quiet: true })
       toast('Máquina borrada', 'success')
       onClose()
     } catch (e) {

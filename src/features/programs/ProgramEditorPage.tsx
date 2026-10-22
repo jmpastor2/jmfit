@@ -123,7 +123,7 @@ function Editor({ initial }: { initial: Program }) {
     const clean = { ...draft, name: draft.name.trim() }
     setBusy(true)
     try {
-      await save(clean)
+      await save(clean, { quiet: true })
       setDraft(clean)
       setSaved(clean)
       toast('Programa guardado', 'success')
@@ -144,7 +144,7 @@ function Editor({ initial }: { initial: Program }) {
     const next = { ...draft, name: draft.name.trim(), archived: false }
     setBusy(true)
     try {
-      await activate(next)
+      await activate(next, { quiet: true })
       setDraft(next)
       setSaved(next)
       toast(`${next.name} es tu programa activo`, 'success')
@@ -159,7 +159,7 @@ function Editor({ initial }: { initial: Program }) {
     const next = { ...saved, archived: !saved.archived }
     setBusy(true)
     try {
-      await save(next)
+      await save(next, { quiet: true })
       setSaved(next)
       setDraft((d) => ({ ...d, archived: next.archived }))
       toast(next.archived ? 'Programa archivado' : 'Programa recuperado', 'success')

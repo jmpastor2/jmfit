@@ -14,6 +14,7 @@ import {
   usePrograms,
   useScans,
   useSets,
+  queued,
   useTrainingActions,
   useWorkouts,
 } from '@/data/hooks'
@@ -238,12 +239,12 @@ function WorkoutDetail({ workout }: { workout: WorkoutFull }) {
         onClose={() => setEditing(null)}
         onSave={async (s) => {
           setEditing(null)
-          await saveSets([s])
+          queued(saveSets([s]))
           toast('Serie actualizada')
         }}
         onDelete={async (s) => {
           setEditing(null)
-          await deleteSets([s.id])
+          queued(deleteSets([s.id]))
           toast('Serie borrada')
         }}
       />

@@ -82,11 +82,17 @@ function CheckinForm({ open, onClose }: { open: boolean; onClose: () => void }) 
     )
     setBusy(true)
     onClose()
+    // Queued at once; without signal the queue keeps it and sends it when the connection returns.
+    const online = navigator.onLine
+    const saving = Promise.all(
+      [writes.today, writes.yesterday].flatMap((c) => (c ? [save(c, { quiet: true })] : [])),
+    )
+    if (!online) toast('Sin conexión: el check-in se guardará al volver')
     try {
-      await Promise.all([writes.today, writes.yesterday].flatMap((c) => (c ? [save(c)] : [])))
-      toast('Check-in guardado')
+      await saving
+      if (online) toast('Check-in guardado')
     } catch {
-      toast('Se guardará al recuperar la conexión', 'warn')
+      toast('No se pudo guardar el check-in', 'error')
     } finally {
       setBusy(false)
     }

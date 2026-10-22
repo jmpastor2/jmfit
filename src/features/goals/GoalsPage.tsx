@@ -100,7 +100,7 @@ export function GoalsPage() {
 
   const doArchive = async (g: UserGoal) => {
     try {
-      await archive(g.id)
+      await archive(g.id, { quiet: true })
       toast('Objetivo archivado')
     } catch {
       toast('No se pudo archivar. Prueba con conexión.', 'error')

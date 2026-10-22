@@ -80,7 +80,7 @@ export function ProgramsPage() {
     const p = programFromTemplate(t, todayKey(), () => crypto.randomUUID())
     setBusy(true)
     try {
-      await activate(p)
+      await activate(p, { quiet: true })
       setPreview(null)
       toast(`${p.name} es tu programa activo`, 'success')
       nav('/train')
@@ -103,7 +103,7 @@ export function ProgramsPage() {
     }
     setBusy(true)
     try {
-      await save(p)
+      await save(p, { quiet: true })
       nav(`/programs/${p.id}`)
     } catch (e) {
       toast(e instanceof Error ? e.message : 'No se pudo crear', 'error')
@@ -144,7 +144,10 @@ export function ProgramsPage() {
                     variant="soft"
                     disabled={busy}
                     onClick={() =>
-                      run(() => activate({ ...p, startedOn: todayKey() }), `${p.name} activado`)
+                      run(
+                        () => activate({ ...p, startedOn: todayKey() }, { quiet: true }),
+                        `${p.name} activado`,
+                      )
                     }
                   >
                     Activar
@@ -162,7 +165,12 @@ export function ProgramsPage() {
                     variant="ghost"
                     disabled={busy}
                     leading={<Archive className="size-4" />}
-                    onClick={() => run(() => save({ ...p, archived: true }), 'Programa archivado')}
+                    onClick={() =>
+                      run(
+                        () => save({ ...p, archived: true }, { quiet: true }),
+                        'Programa archivado',
+                      )
+                    }
                   >
                     Archivar
                   </Button>
@@ -192,7 +200,10 @@ export function ProgramsPage() {
                         disabled={busy}
                         leading={<RotateCcw className="size-4" />}
                         onClick={() =>
-                          run(() => save({ ...p, archived: false }), 'Programa recuperado')
+                          run(
+                            () => save({ ...p, archived: false }, { quiet: true }),
+                            'Programa recuperado',
+                          )
                         }
                       >
                         Recuperar

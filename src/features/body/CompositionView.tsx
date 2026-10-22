@@ -387,7 +387,7 @@ function ScanList({ scans }: { scans: Scan[] }) {
     if (!confirm) return
     setBusy(true)
     try {
-      await remove(confirm.date)
+      await remove(confirm.date, { quiet: true })
       toast(`Escáner del ${longDate(confirm.date)} borrado`, 'success')
       setConfirm(null)
     } catch (e) {

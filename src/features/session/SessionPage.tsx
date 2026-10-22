@@ -16,6 +16,7 @@ import { Sheet } from '@/components/ui/Sheet'
 import { useToast } from '@/components/ui/Toast'
 import { MUSCLE_LABEL } from '@/content/exercises'
 import {
+  queued,
   useActiveProgram,
   useActiveWorkout,
   useMe,
@@ -185,7 +186,7 @@ function Session({ workout }: { workout: WorkoutFull }) {
       setFocus(partner.index)
       if (prs.length) toast(prMessage(prs[0]!), 'success')
       revealActiveSet()
-      await saveSets([set])
+      queued(saveSets([set]))
       return
     }
     if (!(isLastWork && block.index === blocks.length - 1)) {
@@ -200,13 +201,13 @@ function Session({ workout }: { workout: WorkoutFull }) {
     }
     if (prs.length) toast(prMessage(prs[0]!), 'success')
     revealActiveSet()
-    await saveSets([set])
+    queued(saveSets([set]))
   }
 
   const addExercise = async (e: Exercise) => {
     const plan = [...workout.plan, slotFor(e)]
     setFocus(plan.length - 1)
-    await saveWorkout({ ...workout, plan })
+    queued(saveWorkout({ ...workout, plan }))
   }
 
   /**
@@ -220,20 +221,22 @@ function Session({ workout }: { workout: WorkoutFull }) {
     toast(`¿Usar ${to.name} siempre en ${day.name}?`, 'info', {
       action: {
         label: 'Guardar',
-        onAction: async () => {
-          await saveProgram({
-            ...program,
-            days: program.days.map((d) =>
-              d.id !== day.id
-                ? d
-                : {
-                    ...d,
-                    slots: d.slots.map((s) =>
-                      s.id === slotId ? { ...s, exerciseId: to.id, restSec: to.restSec } : s,
-                    ),
-                  },
-            ),
-          })
+        onAction: () => {
+          queued(
+            saveProgram({
+              ...program,
+              days: program.days.map((d) =>
+                d.id !== day.id
+                  ? d
+                  : {
+                      ...d,
+                      slots: d.slots.map((s) =>
+                        s.id === slotId ? { ...s, exerciseId: to.id, restSec: to.restSec } : s,
+                      ),
+                    },
+              ),
+            }),
+          )
           toast(`${day.name}: ${from.name} → ${to.name}`, 'success')
         },
       },
@@ -251,8 +254,9 @@ function Session({ workout }: { workout: WorkoutFull }) {
       const plan = workout.plan.map((s, i) =>
         i === index ? { ...s, exerciseId: e.id, restSec: e.restSec } : s,
       )
-      await saveWorkout({ ...workout, plan })
-      await deleteSets(mine.map((s) => s.id))
+      // Queued together, sent in this order; the screen does not wait for the network.
+      queued(saveWorkout({ ...workout, plan }))
+      queued(deleteSets(mine.map((s) => s.id)))
       return
     }
     // Work sets already done stay with the exercise they were done on; the replacement comes
@@ -275,8 +279,8 @@ function Session({ workout }: { workout: WorkoutFull }) {
       .filter((s) => s.exerciseIndex > index)
       .map((s) => ({ ...s, exerciseIndex: s.exerciseIndex + 1 }))
     setFocus(index + 1)
-    await saveWorkout({ ...workout, plan })
-    await saveSets(moved)
+    queued(saveWorkout({ ...workout, plan }))
+    queued(saveSets(moved))
   }
 
   /** Log every pending work set of an exercise at once (done while resting, or written later). */
@@ -287,12 +291,12 @@ function Session({ workout }: { workout: WorkoutFull }) {
     setFocus(next === -1 ? null : next)
     const prs = q.sets.flatMap((s) => detectPRs(s, prior(s.exerciseId, s.id)))
     if (prs.length) toast(prMessage(prs[0]!), 'success')
-    await saveSets(q.sets)
+    queued(saveSets(q.sets))
   }
 
   const addSet = async (index: number) => {
     const plan = workout.plan.map((s, i) => (i === index ? { ...s, sets: s.sets + 1 } : s))
-    await saveWorkout({ ...workout, plan })
+    queued(saveWorkout({ ...workout, plan }))
   }
 
   const removeExercise = async (index: number) => {
@@ -303,9 +307,9 @@ function Session({ workout }: { workout: WorkoutFull }) {
       .map((s) => ({ ...s, exerciseIndex: s.exerciseIndex - 1 }))
     const plan = workout.plan.filter((_, i) => i !== index)
     setFocus(null)
-    await saveWorkout({ ...workout, plan })
-    await deleteSets(ids)
-    await saveSets(moved)
+    queued(saveWorkout({ ...workout, plan }))
+    queued(deleteSets(ids))
+    queued(saveSets(moved))
   }
 
   const doneSets = logged.filter((s) => s.kind !== 'warmup').length
@@ -345,10 +349,10 @@ function Session({ workout }: { workout: WorkoutFull }) {
               onSwap={() => setPicker({ mode: 'swap', index: b.index })}
               onAddSet={() => addSet(b.index)}
               onRemove={() => removeExercise(b.index)}
-              onEditSet={(set) => saveSets([set])}
+              onEditSet={async (set) => queued(saveSets([set]))}
               quick={quickFill(b, workout.id, logged, renderNow)}
               onQuick={() => fillRemaining(b)}
-              onDeleteSet={(set) => deleteSets([set.id])}
+              onDeleteSet={async (set) => queued(deleteSets([set.id]))}
               barKg={me.barKg}
               plates={me.platesKg}
               allSets={sets}
@@ -831,6 +835,7 @@ function ActiveSet({
   const [ramp, setRamp] = useState(false)
   const canRamp = t.kind !== 'warmup' && !exercise.timed
   const [busy, setBusy] = useState(false)
+  const { toast } = useToast()
 
   const w = parseNum(weight)
   const r = parseNum(reps)
@@ -956,6 +961,8 @@ function ActiveSet({
             )
             // One ramp set at a time: the next set starts as a work set again.
             setRamp(false)
+          } catch {
+            toast('No se pudo registrar la serie', 'error')
           } finally {
             setBusy(false)
           }

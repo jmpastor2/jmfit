@@ -10,6 +10,7 @@ import '@/styles/globals.css'
 import { router } from '@/app/App'
 import { ToastProvider } from '@/components/ui/Toast'
 import { registerMutationDefaults } from '@/data/hooks'
+import { WriteErrorToasts } from '@/data/WriteErrorToasts'
 import { FixedSessionProvider, type SessionState } from '@/features/auth/SessionProvider'
 import { createQueryClient } from '@/lib/queryClient'
 import { setSupabaseClient } from '@/lib/supabase'
@@ -62,6 +63,7 @@ if (!real) {
       <QueryClientProvider client={client}>
         <FixedSessionProvider value={session}>
           <ToastProvider>
+            <WriteErrorToasts />
             <RouterProvider router={router} />
           </ToastProvider>
         </FixedSessionProvider>

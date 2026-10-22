@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useToast } from '@/components/ui/Toast'
-import { useActiveProgram, useProgramActions } from '@/data/hooks'
+import { queued, useActiveProgram, useProgramActions } from '@/data/hooks'
 import type { WorkoutFull } from '@/data/rows'
 import type { Exercise } from '@/domain/types'
 
@@ -56,16 +56,18 @@ export function ProgramSwapsSection({
   const swaps = useMemo(() => programSwaps(workout, program, lookup), [workout, program, lookup])
   if (!program || !swaps.length) return null
 
-  const keep = async (swap: ProgramSwap) => {
-    await save({
-      ...program,
-      days: program.days.map((d) => ({
-        ...d,
-        slots: d.slots.map((s) =>
-          s.id === swap.slotId ? { ...s, exerciseId: swap.to.id, restSec: swap.to.restSec } : s,
-        ),
-      })),
-    })
+  const keep = (swap: ProgramSwap) => {
+    queued(
+      save({
+        ...program,
+        days: program.days.map((d) => ({
+          ...d,
+          slots: d.slots.map((s) =>
+            s.id === swap.slotId ? { ...s, exerciseId: swap.to.id, restSec: swap.to.restSec } : s,
+          ),
+        })),
+      }),
+    )
     setSaved((prev) => new Set(prev).add(swap.slotId))
     toast(`${swap.dayName}: ahora ${swap.to.name}`, 'success')
   }
@@ -88,7 +90,7 @@ export function ProgramSwapsSection({
             ) : (
               <button
                 type="button"
-                onClick={() => void keep(swap)}
+                onClick={() => keep(swap)}
                 className="shrink-0 rounded-[8px] border border-gold/60 px-3 py-2 text-[12.5px] font-semibold text-gold"
               >
                 Guardar

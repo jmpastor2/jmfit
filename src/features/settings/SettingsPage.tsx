@@ -44,7 +44,7 @@ export function SettingsPage() {
       return
     }
     try {
-      await update.mutateAsync(patch)
+      await update.mutateAsync(patch, { quiet: true })
       toast('Ajustes guardados', 'success')
       setSubmitted(false)
     } catch (e) {

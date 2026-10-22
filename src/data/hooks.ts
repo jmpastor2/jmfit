@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tansta
 import { useCallback } from 'react'
 import type { Checkin, LoggedSet, Scan, UserGoal } from '@/domain/types'
 import { useSession } from '@/features/auth/SessionProvider'
+import { WRITE_SCOPE } from '@/lib/queryClient'
 import { requireSupabase } from '@/lib/supabase'
 import {
   fromCheckin,
@@ -41,6 +42,7 @@ import {
   type WorkoutFull,
   type WorkoutRow,
 } from './rows'
+import { reportWriteError } from './writeErrors'
 
 export function useUid(): string {
   const { user } = useSession()
@@ -62,18 +64,32 @@ async function fetchAll<T>(
   }
 }
 
-/* ───────────── Generic writes (resumable after a reload) ───────────── */
+/* ───────────── Generic writes (one queue, resumable after a reload) ───────────── */
 
-interface UpsertVars {
+/** Options a screen can pass to a write. */
+export interface WriteOptions {
+  /** The screen reports a failure itself: skip the generic toast. */
+  quiet?: boolean
+}
+
+interface UpsertVars extends WriteOptions {
   table: string
   rows: object[]
   onConflict?: string
 }
-interface DeleteVars {
+interface DeleteVars extends WriteOptions {
   table: string
   column: string
   values: string[]
+  /** Extra equality filters (e.g. the owner). */
+  match?: Record<string, string>
 }
+interface UpdateVars extends WriteOptions {
+  table: string
+  patch: object
+  match: Record<string, string>
+}
+type WriteVars = UpsertVars | DeleteVars | UpdateVars
 
 async function runUpsert({ table, rows, onConflict }: UpsertVars) {
   const sb = requireSupabase()
@@ -81,26 +97,83 @@ async function runUpsert({ table, rows, onConflict }: UpsertVars) {
   if (error) throw error
 }
 
-async function runDelete({ table, column, values }: DeleteVars) {
-  const sb = requireSupabase()
-  const { error } = await sb.from(table).delete().in(column, values)
+async function runDelete({ table, column, values, match = {} }: DeleteVars) {
+  let q = requireSupabase().from(table).delete().in(column, values)
+  for (const [k, v] of Object.entries(match)) q = q.eq(k, v)
+  const { error } = await q
   if (error) throw error
 }
 
-/**
- * Paused mutations are persisted without their functions; after a reload TanStack Query finds
- * them again through these defaults (matched by mutation key) and sends them.
- */
-export function registerMutationDefaults(qc: QueryClient) {
-  qc.setMutationDefaults(['upsert'], { mutationFn: (v: UpsertVars) => runUpsert(v) })
-  qc.setMutationDefaults(['delete'], { mutationFn: (v: DeleteVars) => runDelete(v) })
+async function runUpdate({ table, patch, match }: UpdateVars) {
+  let q = requireSupabase().from(table).update(patch)
+  for (const [k, v] of Object.entries(match)) q = q.eq(k, v)
+  const { error } = await q
+  if (error) throw error
 }
 
+/** The cached lists a write to each table touches (a workout takes its sets with it). */
+const QUERIES_OF_TABLE: Record<string, string[]> = {
+  profiles: ['profile'],
+  programs: ['programs'],
+  workouts: ['workouts', 'sets'],
+  workout_sets: ['sets'],
+  scans: ['scans'],
+  goals: ['goals'],
+  checkins: ['checkins'],
+  gym_machines: ['machines'],
+}
+
+/**
+ * Every write goes through one of these defaults (matched by mutation key), which:
+ * - share one scope, so they reach the server one at a time in the order they were made
+ *   (a set never arrives before its workout, a delete never overtakes the insert before it);
+ * - keep their functions, so writes persisted while paused are sent after a reload;
+ * - on a definite failure, tell the person and refetch what was touched, so the screen never
+ *   shows as saved something the server does not have. The refetch waits until the queue is
+ *   empty, so the writes still on their way keep showing.
+ */
+export function registerMutationDefaults(qc: QueryClient) {
+  const stale = new Set<string>()
+  const settle = (error: unknown, vars: WriteVars | undefined) => {
+    if (error) {
+      for (const k of QUERIES_OF_TABLE[vars?.table ?? ''] ?? []) stale.add(k)
+      if (!vars?.quiet) reportWriteError(error)
+    }
+    // This write still counts as pending while it settles.
+    const pending = qc.isMutating({ predicate: (m) => m.options.scope?.id === WRITE_SCOPE })
+    if (stale.size && pending <= 1) {
+      for (const k of stale) void qc.invalidateQueries({ queryKey: [k] })
+      stale.clear()
+    }
+  }
+  const common = {
+    scope: { id: WRITE_SCOPE },
+    onSettled: (_data: unknown, error: unknown, vars: WriteVars | undefined) => settle(error, vars),
+  }
+  qc.setMutationDefaults(['upsert'], { ...common, mutationFn: (v: UpsertVars) => runUpsert(v) })
+  qc.setMutationDefaults(['delete'], { ...common, mutationFn: (v: DeleteVars) => runDelete(v) })
+  qc.setMutationDefaults(['update'], { ...common, mutationFn: (v: UpdateVars) => runUpdate(v) })
+}
+
+/**
+ * The write functions. Each call is queued at once (callers update the cache first and need
+ * not wait for one write before making the next); the promise settles when the server has it,
+ * or rejects on a definite failure.
+ */
 function useWrites() {
   const qc = useQueryClient()
   const upsert = useMutation<void, Error, UpsertVars>({ mutationKey: ['upsert'] })
   const del = useMutation<void, Error, DeleteVars>({ mutationKey: ['delete'] })
-  return { qc, upsert: upsert.mutateAsync, del: del.mutateAsync }
+  const update = useMutation<void, Error, UpdateVars>({ mutationKey: ['update'] })
+  return { qc, upsert: upsert.mutateAsync, del: del.mutateAsync, update: update.mutateAsync }
+}
+
+/**
+ * Hand a write to the queue without waiting for the server: the cache already shows it, the
+ * queue sends it when it can, and a failure is reported (toast and refetch) by the queue.
+ */
+export function queued(write: Promise<unknown>): void {
+  write.catch(() => {})
 }
 
 /** Replace or insert items by id in a cached list. */
@@ -157,19 +230,22 @@ export function useMe(): Profile {
 export function useUpdateProfile() {
   const uid = useUid()
   const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (patch: Partial<Profile>) => {
-      const { error } = await requireSupabase()
-        .from('profiles')
-        .update({ ...profilePatch(patch), updated_at: new Date().toISOString() })
-        .eq('id', uid)
-      if (error) throw error
-    },
-    onMutate: (patch) => {
-      qc.setQueryData<Profile>(profileKey(uid), (p) => (p ? { ...p, ...patch } : p))
-    },
-    onSettled: () => qc.invalidateQueries({ queryKey: profileKey(uid) }),
+  const { mutateAsync: send, isPending } = useMutation<void, Error, UpdateVars>({
+    mutationKey: ['update'],
   })
+  const mutateAsync = useCallback(
+    async (patch: Partial<Profile>, opts: WriteOptions = {}) => {
+      qc.setQueryData<Profile>(profileKey(uid), (p) => (p ? { ...p, ...patch } : p))
+      await send({
+        ...opts,
+        table: 'profiles',
+        patch: { ...profilePatch(patch), updated_at: new Date().toISOString() },
+        match: { id: uid },
+      }).finally(() => void qc.invalidateQueries({ queryKey: profileKey(uid) }))
+    },
+    [qc, uid, send],
+  )
+  return { mutateAsync, isPending }
 }
 
 /* ───────────── Programs ───────────── */
@@ -201,21 +277,23 @@ export function useProgramActions() {
   const { qc, upsert } = useWrites()
   const updateProfile = useUpdateProfile()
   const save = useCallback(
-    async (p: Program) => {
+    async (p: Program, opts: WriteOptions = {}) => {
       patchList(qc, ['programs', uid], [p])
       await upsert({
+        ...opts,
         table: 'programs',
         rows: [{ ...fromProgram(p), updated_at: new Date().toISOString() }],
       })
     },
     [qc, uid, upsert],
   )
+  const setActive = updateProfile.mutateAsync
   const activate = useCallback(
-    async (p: Program) => {
-      await save(p)
-      await updateProfile.mutateAsync({ activeProgramId: p.id })
+    async (p: Program, opts: WriteOptions = {}) => {
+      // Both queued now; the queue sends the program before the profile that points at it.
+      await Promise.all([save(p, opts), setActive({ activeProgramId: p.id }, opts)])
     },
-    [save, updateProfile],
+    [save, setActive],
   )
   return { save, activate }
 }
@@ -274,38 +352,38 @@ export function useTrainingActions() {
   const { qc, upsert, del } = useWrites()
 
   const saveWorkout = useCallback(
-    async (w: WorkoutFull) => {
+    async (w: WorkoutFull, opts: WriteOptions = {}) => {
       patchList(qc, ['workouts', uid], [w], byStartDesc)
-      await upsert({ table: 'workouts', rows: [fromWorkout(w)] })
+      await upsert({ ...opts, table: 'workouts', rows: [fromWorkout(w)] })
     },
     [qc, uid, upsert],
   )
 
   const saveSets = useCallback(
-    async (sets: LoggedSet[]) => {
+    async (sets: LoggedSet[], opts: WriteOptions = {}) => {
       if (!sets.length) return
       patchList(qc, ['sets', uid], sets, bySetOrder)
-      await upsert({ table: 'workout_sets', rows: sets.map(fromSet) })
+      await upsert({ ...opts, table: 'workout_sets', rows: sets.map(fromSet) })
     },
     [qc, uid, upsert],
   )
 
   const deleteSets = useCallback(
-    async (ids: string[]) => {
+    async (ids: string[], opts: WriteOptions = {}) => {
       if (!ids.length) return
       dropFromList<LoggedSet>(qc, ['sets', uid], ids)
-      await del({ table: 'workout_sets', column: 'id', values: ids })
+      await del({ ...opts, table: 'workout_sets', column: 'id', values: ids })
     },
     [qc, uid, del],
   )
 
   const deleteWorkout = useCallback(
-    async (id: string) => {
+    async (id: string, opts: WriteOptions = {}) => {
       dropFromList<WorkoutFull>(qc, ['workouts', uid], [id])
       qc.setQueryData<LoggedSet[]>(['sets', uid], (prev = []) =>
         prev.filter((s) => s.workoutId !== id),
       )
-      await del({ table: 'workouts', column: 'id', values: [id] })
+      await del({ ...opts, table: 'workouts', column: 'id', values: [id] })
     },
     [qc, uid, del],
   )
@@ -332,9 +410,9 @@ export function useScans() {
 
 export function useScanActions() {
   const uid = useUid()
-  const { qc, upsert } = useWrites()
+  const { qc, upsert, del } = useWrites()
   const save = useCallback(
-    async (scans: Scan[]) => {
+    async (scans: Scan[], opts: WriteOptions = {}) => {
       if (!scans.length) return
       qc.setQueryData<Scan[]>(['scans', uid], (prev = []) => {
         const map = new Map(prev.map((s) => [s.date, s]))
@@ -342,6 +420,7 @@ export function useScanActions() {
         return [...map.values()].sort((a, b) => a.date.localeCompare(b.date))
       })
       await upsert({
+        ...opts,
         table: 'scans',
         rows: scans.map((s) => ({ ...fromScan(s), user_id: uid })),
         onConflict: 'user_id,date',
@@ -350,16 +429,17 @@ export function useScanActions() {
     [qc, uid, upsert],
   )
   const remove = useCallback(
-    async (date: string) => {
+    async (date: string, opts: WriteOptions = {}) => {
       qc.setQueryData<Scan[]>(['scans', uid], (prev = []) => prev.filter((s) => s.date !== date))
-      const { error } = await requireSupabase()
-        .from('scans')
-        .delete()
-        .eq('date', date)
-        .eq('user_id', uid)
-      if (error) throw error
+      await del({
+        ...opts,
+        table: 'scans',
+        column: 'date',
+        values: [date],
+        match: { user_id: uid },
+      })
     },
-    [qc, uid],
+    [qc, uid, del],
   )
   return { save, remove }
 }
@@ -384,24 +464,20 @@ export function useGoals() {
 
 export function useGoalActions() {
   const uid = useUid()
-  const { qc, upsert } = useWrites()
+  const { qc, upsert, update } = useWrites()
   const save = useCallback(
-    async (g: UserGoal) => {
+    async (g: UserGoal, opts: WriteOptions = {}) => {
       patchList(qc, ['goals', uid], [g])
-      await upsert({ table: 'goals', rows: [fromGoal(g)] })
+      await upsert({ ...opts, table: 'goals', rows: [fromGoal(g)] })
     },
     [qc, uid, upsert],
   )
   const archive = useCallback(
-    async (id: string) => {
+    async (id: string, opts: WriteOptions = {}) => {
       dropFromList<UserGoal>(qc, ['goals', uid], [id])
-      const { error } = await requireSupabase()
-        .from('goals')
-        .update({ archived: true })
-        .eq('id', id)
-      if (error) throw error
+      await update({ ...opts, table: 'goals', patch: { archived: true }, match: { id } })
     },
-    [qc, uid],
+    [qc, uid, update],
   )
   return { save, archive }
 }
@@ -428,11 +504,16 @@ export function useSaveCheckin() {
   const uid = useUid()
   const { qc, upsert } = useWrites()
   return useCallback(
-    async (c: Checkin) => {
+    async (c: Checkin, opts: WriteOptions = {}) => {
       qc.setQueryData<Checkin[]>(['checkins', uid], (prev = []) =>
         [c, ...prev.filter((x) => x.date !== c.date)].sort((a, b) => b.date.localeCompare(a.date)),
       )
-      await upsert({ table: 'checkins', rows: [fromCheckin(c)], onConflict: 'user_id,date' })
+      await upsert({
+        ...opts,
+        table: 'checkins',
+        rows: [fromCheckin(c)],
+        onConflict: 'user_id,date',
+      })
     },
     [qc, uid, upsert],
   )
@@ -520,16 +601,16 @@ export function useMachineActions() {
   const uid = useUid()
   const { qc, upsert, del } = useWrites()
   const save = useCallback(
-    async (m: GymMachine) => {
+    async (m: GymMachine, opts: WriteOptions = {}) => {
       patchList(qc, ['machines', uid], [m], (a, b) => a.label.localeCompare(b.label, 'es'))
-      await upsert({ table: 'gym_machines', rows: [fromMachine(m)] })
+      await upsert({ ...opts, table: 'gym_machines', rows: [fromMachine(m)] })
     },
     [qc, uid, upsert],
   )
   const remove = useCallback(
-    async (id: string) => {
+    async (id: string, opts: WriteOptions = {}) => {
       dropFromList<GymMachine>(qc, ['machines', uid], [id])
-      await del({ table: 'gym_machines', column: 'id', values: [id] })
+      await del({ ...opts, table: 'gym_machines', column: 'id', values: [id] })
     },
     [qc, uid, del],
   )

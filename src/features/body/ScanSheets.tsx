@@ -44,7 +44,7 @@ export function AddScanSheet({ open, onClose }: { open: boolean; onClose: () => 
       scan.grasaKg = Math.round(scan.grasa * scan.peso) / 100
     setBusy(true)
     try {
-      await save([scan])
+      await save([scan], { quiet: true })
       toast(`Escáner del ${longDate(date)} guardado`, 'success')
       setValues({})
       onClose()
@@ -133,7 +133,7 @@ export function ImportScansSheet({
   const run = async () => {
     setBusy(true)
     try {
-      await save(scans)
+      await save(scans, { quiet: true })
       toast(`${scans.length} escáneres importados`, 'success')
       onClose()
     } catch (e) {

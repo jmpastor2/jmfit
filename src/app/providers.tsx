@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react'
 import { ToastProvider } from '@/components/ui/Toast'
 import { SessionProvider } from '@/features/auth/SessionProvider'
 import { registerMutationDefaults } from '@/data/hooks'
+import { WriteErrorToasts } from '@/data/WriteErrorToasts'
 import { CACHE_BUSTER, createIdbPersister, createQueryClient } from '@/lib/queryClient'
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -18,7 +19,10 @@ export function Providers({ children }: { children: ReactNode }) {
 
   const tree = (
     <SessionProvider>
-      <ToastProvider>{children}</ToastProvider>
+      <ToastProvider>
+        <WriteErrorToasts />
+        {children}
+      </ToastProvider>
     </SessionProvider>
   )
 

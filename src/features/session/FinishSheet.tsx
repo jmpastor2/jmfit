@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Field, Input, Textarea } from '@/components/ui/Field'
 import { Sheet } from '@/components/ui/Sheet'
 import { useToast } from '@/components/ui/Toast'
-import { useTrainingActions } from '@/data/hooks'
+import { queued, useTrainingActions } from '@/data/hooks'
 import type { WorkoutFull } from '@/data/rows'
 import { formatNumber } from '@/domain/training'
 import type { LoggedSet } from '@/domain/types'
@@ -53,6 +53,20 @@ export function FinishSheet({
   const [busy, setBusy] = useState(false)
   const workSets = logged.filter((s) => s.kind !== 'warmup').length
 
+  /**
+   * The queue keeps trying while the server cannot be reached (also after closing the app), so
+   * this only fails when the server refused the session: say so and offer to send it again.
+   */
+  const save = async (ended: WorkoutFull) => {
+    try {
+      await saveWorkout(ended, { quiet: true })
+    } catch {
+      toast('No se pudo guardar la sesión', 'error', {
+        action: { label: 'Reintentar', onAction: () => save(ended) },
+      })
+    }
+  }
+
   const finish = async () => {
     setBusy(true)
     const weight = Number(bw.replace(',', '.'))
@@ -64,19 +78,16 @@ export function FinishSheet({
     ended.bodyweight = bw.trim() && Number.isFinite(weight) && weight > 0 ? weight : null
     ended.notes = notes.trim() || null
     // The cache is updated synchronously inside saveWorkout, so the summary opens on a closed session.
-    const saving = saveWorkout(ended)
+    const saving = save(ended)
     nav(`/session/${workout.id}/summary`, { replace: true })
-    try {
-      await saving
-    } catch {
-      toast('Se guardará al recuperar la conexión', 'warn')
-    }
+    if (!navigator.onLine) toast('Sin conexión: la sesión se guardará al volver')
+    await saving
   }
 
-  const discard = async () => {
+  const discard = () => {
     restTimer.stop()
     nav('/', { replace: true })
-    await deleteWorkout(workout.id)
+    queued(deleteWorkout(workout.id))
     toast('Sesión descartada')
   }
 

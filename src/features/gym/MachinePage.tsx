@@ -11,6 +11,7 @@ import {
   useMachines,
   useScans,
   useSets,
+  queued,
   useTrainingActions,
   useWorkouts,
 } from '@/data/hooks'
@@ -108,7 +109,7 @@ export function MachinePage() {
   const addToSession = async () => {
     if (!active) return
     if (!inSession) {
-      await saveWorkout({ ...active, plan: [...active.plan, slotFor(exercise)] })
+      queued(saveWorkout({ ...active, plan: [...active.plan, slotFor(exercise)] }))
       toast(`${exercise.name} añadido a la sesión`, 'success')
     }
     nav('/session')

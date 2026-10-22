@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Field'
 import { Segmented } from '@/components/ui/primitives'
 import { useProfile, useUpdateProfile } from '@/data/hooks'
+import { localDateKey } from '@/domain/training'
 import type { Profile } from '@/data/rows'
 import type { Experience, Goal } from '@/domain/types'
 import { EXPERIENCE_LABEL, GOAL_LABEL, GOAL_ORDER } from '@/features/programs/labels'
@@ -62,23 +63,26 @@ function Wizard({ profile }: { profile: Profile }) {
 
   const heightNum = height ? Number(height.replace(',', '.')) : null
   const heightOk = heightNum === null || (heightNum >= 120 && heightNum <= 230)
-  const [today] = useState(() => new Date().toISOString().slice(0, 10))
+  const [today] = useState(() => localDateKey(new Date()))
   const birthOk = !birth || (birth >= '1920-01-01' && birth <= today)
   const step0Ok = name.trim().length > 0 && heightOk && birthOk
 
   const finish = async () => {
     setError(null)
     try {
-      await update.mutateAsync({
-        displayName: name.trim(),
-        sex,
-        birthDate: birth || null,
-        heightCm: heightNum === null ? null : Math.round(heightNum),
-        experience,
-        trainingGoal: goal,
-        weeklyTarget: days,
-        onboarded: true,
-      })
+      await update.mutateAsync(
+        {
+          displayName: name.trim(),
+          sex,
+          birthDate: birth || null,
+          heightCm: heightNum === null ? null : Math.round(heightNum),
+          experience,
+          trainingGoal: goal,
+          weeklyTarget: days,
+          onboarded: true,
+        },
+        { quiet: true },
+      )
       nav('/programs', { replace: true })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo guardar. Revisa la conexión.')
