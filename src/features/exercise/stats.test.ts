@@ -198,4 +198,12 @@ describe('latestBodyweight', () => {
     ).toEqual({ value: 77.5, date: '2026-09-20' })
     expect(latestBodyweight([], [])).toBeNull()
   })
+
+  it('dates a logged bodyweight by the local day of the session, not the UTC one', () => {
+    // Just after local midnight is still the previous day in UTC east of Greenwich (Spain).
+    const late = new Date(2026, 8, 20, 23, 30).toISOString()
+    const early = new Date(2026, 8, 21, 0, 30).toISOString()
+    expect(latestBodyweight([], [{ startedAt: late, bodyweight: 77 }])?.date).toBe('2026-09-20')
+    expect(latestBodyweight([], [{ startedAt: early, bodyweight: 77 }])?.date).toBe('2026-09-21')
+  })
 })

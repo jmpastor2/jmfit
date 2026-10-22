@@ -2,7 +2,7 @@
  * Per-exercise history derived from the logged sets: sessions, e1RM over time, current e1RM,
  * best sets for machines, main lifts and the chronological list of personal records. Pure functions (no clock).
  */
-import { detectPRs, estimate1RM, isRecordEligible } from '@/domain/training'
+import { detectPRs, estimate1RM, isRecordEligible, localDateKey } from '@/domain/training'
 import { STRENGTH_STANDARDS } from '@/content/standards'
 import type { Equipment, Exercise, LoggedSet, PersonalRecord, Scan, Workout } from '@/domain/types'
 
@@ -283,7 +283,8 @@ export function latestBodyweight(
       best = { value: s.peso, date: s.date }
   }
   for (const w of workouts) {
-    const d = w.startedAt.slice(0, 10)
+    // The local day it was done on: a late session must not land on the next UTC day.
+    const d = localDateKey(new Date(w.startedAt))
     if (w.bodyweight != null && w.bodyweight > 0 && (!best || d > best.date)) {
       best = { value: w.bodyweight, date: d }
     }

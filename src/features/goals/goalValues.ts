@@ -152,7 +152,7 @@ export function goalHistory(
       const pts = new Map<string, number>()
       for (const s of d.scans) if (s.peso != null) pts.set(s.date, s.peso)
       for (const w of d.workouts) {
-        const day = w.startedAt.slice(0, 10)
+        const day = localDateKey(new Date(w.startedAt))
         if (w.bodyweight != null && !pts.has(day)) pts.set(day, w.bodyweight)
       }
       return [...pts.entries()]
