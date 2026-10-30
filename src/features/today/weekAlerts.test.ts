@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { WorkoutFull } from '@/data/rows'
 import type { LoggedSet, Muscle, ProgramDay, Slot } from '@/domain/types'
 import {
+  lostLine,
   recoverSentence,
   remainingDays,
   sessionSkips,
@@ -234,5 +235,28 @@ describe('skipped vs substituted', () => {
     const open = workout('Abierta', new Date(2026, 9, 19, 11).toISOString(), [slot('curl')], false)
     const r = weekSkips([sunday, monday, open], [], lookup, now)
     expect(r.map((x) => x.workoutId)).toEqual(['Lun'])
+  })
+})
+
+describe('lostLine', () => {
+  const gap = (muscle: Muscle, recover: boolean) => ({
+    muscle,
+    done: 0,
+    planned: 10,
+    ahead: 0,
+    missing: 10,
+    recoverDays: recover ? [{ id: 'd', name: 'Torso', focus: '', weekday: null, slots: [] }] : [],
+  })
+  const label = (m: Muscle) =>
+    ({ glutes: 'Glúteos', quads: 'Cuádriceps', biceps: 'Bíceps' })[m as 'glutes']
+
+  it('names in one line the muscles no day left can make up', () => {
+    expect(lostLine([gap('glutes', false), gap('quads', false), gap('biceps', true)], label)).toBe(
+      'Glúteos y cuádriceps se quedan cortos esta semana: ningún día que queda los trabaja.',
+    )
+    expect(lostLine([gap('quads', false)], label)).toBe(
+      'Cuádriceps se queda corto esta semana: ningún día que queda lo trabaja.',
+    )
+    expect(lostLine([gap('biceps', true)], label)).toBe('')
   })
 })

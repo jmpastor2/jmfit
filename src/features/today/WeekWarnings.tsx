@@ -12,7 +12,7 @@ import { mainLifts } from '@/features/exercise/stats'
 import { goalSuggestions, type GoalSuggestion } from '@/features/goals/goalValues'
 import { mesoWeek } from '@/features/session/useStartWorkout'
 import { doneDayIdsThisWeek, finishedToday } from './today'
-import { recoverSentence, skipsLine, volumeGaps, weekSkips } from './weekAlerts'
+import { lostLine, recoverSentence, skipsLine, volumeGaps, weekSkips } from './weekAlerts'
 
 /** Jose Manuel's specialisation: always warned about when behind, even outside the top 3. */
 const FOCUS_MUSCLES: readonly Muscle[] = ['biceps', 'triceps']
@@ -83,6 +83,9 @@ export function WeekWarnings({ now, program }: { now: Date; program: Program | n
   }, [goals, hasActiveGoal, sets, workouts, scans, lookup, now, me.weeklyTarget])
   const askGoal = Boolean(goals) && !hasActiveGoal
 
+  const behind = gaps.filter((g) => g.recoverDays.length)
+  const lost = lostLine(gaps, (m) => MUSCLE_LABEL[m])
+
   if (!gaps.length && !skipped && !askGoal) return null
 
   return (
@@ -90,8 +93,8 @@ export function WeekWarnings({ now, program }: { now: Date; program: Program | n
       {gaps.length > 0 && (
         <div className="py-4">
           <h3 className="spec text-warn">Por detrás del plan</h3>
-          <ul className="mt-3 flex flex-col gap-4">
-            {gaps.map((g) => (
+          <ul className="mt-3 flex flex-col gap-4 empty:hidden">
+            {behind.map((g) => (
               <li key={g.muscle}>
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="text-[14.5px] font-medium">{MUSCLE_LABEL[g.muscle]}</span>
@@ -113,6 +116,7 @@ export function WeekWarnings({ now, program }: { now: Date; program: Program | n
               </li>
             ))}
           </ul>
+          {lost && <p className="mt-3 text-[13px] text-ink-2">{lost}</p>}
           <p className="mt-3 text-[12px] text-muted">
             Series efectivas de esta semana frente a las que pide tu programa (secundario = ½).
           </p>

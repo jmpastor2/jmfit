@@ -154,8 +154,8 @@ function StrengthView({ sets }: { sets: LoggedSet[] }) {
         <section className="mb-6">
           {machines.length > 0 && <SectionTitle>Peso libre</SectionTitle>}
           <p className="mb-2 px-1 text-[13px] text-muted">
-            1RM estimado: la mejor serie de las últimas 4 semanas. La flecha compara con hace 8
-            semanas.
+            1RM estimado: la mejor serie de las últimas 4 semanas, comparada con hace 8 semanas (o
+            con tu primera sesión, mientras no hay tanto historial).
             {bw
               ? ` Nivel (tablas de Strength Level) relativo a ${formatNumber(bw.value, 1)} kg de peso corporal (${shortDate(bw.date)}).`
               : ' Sin peso corporal: registra un escáner para ver tu nivel.'}
@@ -203,18 +203,7 @@ function StrengthView({ sets }: { sets: LoggedSet[] }) {
                         {value != null ? formatNumber(value, 1) : '—'}
                         <span className="ml-0.5 font-sans text-[11px] text-muted">kg</span>
                       </span>
-                      {delta != null ? (
-                        <Delta
-                          className="mt-0.5"
-                          text={`${delta >= 0 ? '+' : ''}${formatNumber(delta, 1)}`}
-                          direction={Math.abs(delta) < 0.05 ? 'flat' : delta > 0 ? 'up' : 'down'}
-                          tone={Math.abs(delta) < 0.05 ? 'neutral' : delta > 0 ? 'good' : 'bad'}
-                        />
-                      ) : (
-                        <span className="mt-0.5 text-[11.5px] text-muted">
-                          {r.current == null ? 'sin datos recientes' : 'sin dato de hace 8 sem'}
-                        </span>
-                      )}
+                      <Change delta={delta} since={r.since} stale={r.current == null} />
                     </span>
                     <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />
                   </Link>
@@ -229,6 +218,31 @@ function StrengthView({ sets }: { sets: LoggedSet[] }) {
   )
 }
 
+/** Change against 8 weeks ago, or against the first session while the history is shorter. */
+function Change({
+  delta,
+  since,
+  stale,
+}: {
+  delta: number | null
+  since: string | null
+  stale: boolean
+}) {
+  if (stale) return <span className="mt-0.5 text-[11.5px] text-muted">sin datos recientes</span>
+  if (delta == null) return null
+  const flat = Math.abs(delta) < 0.05
+  return (
+    <span className="mt-0.5 flex flex-col items-end">
+      <Delta
+        text={`${delta >= 0 ? '+' : ''}${formatNumber(delta, 1)}`}
+        direction={flat ? 'flat' : delta > 0 ? 'up' : 'down'}
+        tone={flat ? 'neutral' : delta > 0 ? 'good' : 'bad'}
+      />
+      {since && <span className="text-[10.5px] text-muted">desde {shortDate(since)}</span>}
+    </span>
+  )
+}
+
 type MachineListRow = ReturnType<typeof machineRow> & { exercise: Exercise; sessions: number }
 
 /** Machines and cables: the load depends on the machine, so best set and its trend only. */
@@ -237,8 +251,8 @@ function MachineList({ rows }: { rows: MachineListRow[] }) {
     <section>
       <SectionTitle>Máquinas y poleas</SectionTitle>
       <p className="-mt-1 mb-2 px-1 text-[12.5px] text-muted">
-        Mejor serie de las últimas 4 semanas (peso × reps). Sin 1RM ni nivel: la carga depende de
-        cada máquina. La flecha compara la carga con hace 8 semanas.
+        Mejor serie de las últimas 4 semanas (peso × reps), comparada con hace 8 semanas o con tu
+        primera sesión. Sin 1RM ni nivel: la carga depende de cada máquina.
       </p>
       <ul className="divide-y divide-line">
         {rows.map((r) => {
@@ -268,18 +282,7 @@ function MachineList({ rows }: { rows: MachineListRow[] }) {
                     {shown ? formatNumber(shown.weight, 1) : '—'}
                     <span className="ml-0.5 font-sans text-[11px] text-muted">kg</span>
                   </span>
-                  {delta != null ? (
-                    <Delta
-                      className="mt-0.5"
-                      text={`${delta >= 0 ? '+' : ''}${formatNumber(delta, 1)}`}
-                      direction={Math.abs(delta) < 0.05 ? 'flat' : delta > 0 ? 'up' : 'down'}
-                      tone={Math.abs(delta) < 0.05 ? 'neutral' : delta > 0 ? 'good' : 'bad'}
-                    />
-                  ) : (
-                    <span className="mt-0.5 text-[11.5px] text-muted">
-                      {r.current == null ? 'sin datos recientes' : 'sin dato de hace 8 sem'}
-                    </span>
-                  )}
+                  <Change delta={delta} since={r.since} stale={r.current == null} />
                 </span>
                 <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />
               </Link>

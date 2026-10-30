@@ -73,6 +73,15 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   claves) sin elegir ni entrar. Las miniaturas quedan en caché para el gimnasio sin señal. En
   Técnica, el selector de vídeo es Español/Inglés.
 
+- 2026-10-30 (paneles): Hoy solo pinta barra para los músculos que aún se pueden recuperar esta
+  semana; los que ya no, en una línea. Sin check-in, «Preparación» es una línea con el botón. Las
+  sesiones que faltan dicen cuántos días quedan. En Progreso, con menos de 8 semanas de historial,
+  la comparación es con la primera sesión («desde 12 oct») en vez de «sin dato de hace 8 sem». En
+  Cuerpo se quita la media de 7 días cuando no hay pesos esa semana. En Entrenar, el día que toca
+  lleva la marca «Toca» y el botón en dorado. Datos: borradas 3 series duplicadas por el fallo de
+  la serie que volvía atrás (press banca 35×5, press de pecho en máquina 60×6 y elevación lateral
+  por detrás 5×10); se dejó la de más peso o, a igual peso, la escrita a mano.
+
 ## Pendiente
 
 1. Publicar: GitHub → Settings → Pages → Source: **GitHub Actions** (una vez), y push a `main`.

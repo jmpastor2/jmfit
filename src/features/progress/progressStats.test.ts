@@ -31,6 +31,21 @@ describe('strengthRow', () => {
     expect(r.before).toBe(90)
     expect(r.spark).toEqual([90, 105])
     expect(r.best).toEqual({ value: 105, date: '2026-10-01T10:00:00' })
+    expect(r.since).toBeNull()
+  })
+
+  it('with a history under 8 weeks, compares with the first session', () => {
+    const one = [set({ workoutId: 'a', weight: 75, reps: 6, doneAt: '2026-09-20T10:00:00' })]
+    expect(strengthRow('bench-press', one, now)).toMatchObject({ before: null, since: null })
+    const two = [
+      ...one,
+      set({ workoutId: 'b', weight: 90, reps: 5, doneAt: '2026-10-01T10:00:00' }),
+    ]
+    expect(strengthRow('bench-press', two, now)).toMatchObject({
+      current: 105,
+      before: 90,
+      since: '2026-09-20T10:00:00',
+    })
   })
 })
 

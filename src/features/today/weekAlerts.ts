@@ -154,6 +154,19 @@ export function recoverSentence(gap: VolumeGap, now: Date): string {
   return `Te ${days.length === 1 ? 'queda' : 'quedan'} ${list} para recuperar.`
 }
 
+/**
+ * One line for the muscles nothing left this week can make up: a bar each for something that
+ * cannot be acted on was noise. «Glúteos y cuádriceps se quedan cortos esta semana: ningún día
+ * que queda los trabaja.»
+ */
+export function lostLine(gaps: readonly VolumeGap[], label: (m: Muscle) => string): string {
+  const lost = gaps.filter((g) => !g.recoverDays.length).map((g) => label(g.muscle).toLowerCase())
+  if (!lost.length) return ''
+  const one = lost.length === 1
+  const list = joinEs(lost)
+  return `${list[0]!.toUpperCase()}${list.slice(1)} se ${one ? 'queda corto' : 'quedan cortos'} esta semana: ningún día que queda ${one ? 'lo' : 'los'} trabaja.`
+}
+
 export interface SkippedSlot {
   exerciseId: string
   slotId: string

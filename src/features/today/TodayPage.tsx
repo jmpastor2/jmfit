@@ -367,6 +367,23 @@ const LEVEL_TEXT: Record<ReadinessLevel, string> = {
 function ReadinessBlock() {
   const r = useReadiness()
   const [open, setOpen] = useState(false)
+  // Nothing to show yet: one line and the button, not an empty dial.
+  if (r.level === 'unknown') {
+    return (
+      <section className="flex items-center justify-between gap-3 border-t border-line py-4">
+        <span className="min-w-0">
+          <span className="spec block text-ink-2">¿Cómo llegas hoy?</span>
+          <span className="block text-[13px] text-muted">
+            Energía y sueño: el plan decide si sube o mantiene pesos.
+          </span>
+        </span>
+        <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
+          Check-in
+        </Button>
+        <CheckinSheet open={open} onClose={() => setOpen(false)} />
+      </section>
+    )
+  }
   const color = r.level === 'easy' ? 'var(--warn)' : 'var(--gold)'
   return (
     <Block title="Preparación">
@@ -376,13 +393,11 @@ function ReadinessBlock() {
         unit={r.score != null ? '/ 100' : undefined}
         tone={r.level === 'easy' ? 'warn' : r.level === 'push' ? 'signal' : 'default'}
         caption={
-          r.level === 'unknown'
-            ? 'Haz el check-in o conecta tu pulsera para saber cómo llegas hoy.'
-            : r.level === 'easy'
-              ? 'Hoy el plan no sube pesos y deja una repetición más en recámara.'
-              : r.level === 'push'
-                ? 'Buen día para intentar subir.'
-                : 'Sigue el plan tal cual.'
+          r.level === 'easy'
+            ? 'Hoy el plan no sube pesos y deja una repetición más en recámara.'
+            : r.level === 'push'
+              ? 'Buen día para intentar subir.'
+              : 'Sigue el plan tal cual.'
         }
       >
         {r.score != null && (
@@ -424,6 +439,9 @@ function WeekBlock({
     () => weekSummary(workouts ?? [], sets ?? [], now, opts),
     [workouts, sets, now, opts],
   )
+  const missing = weeklyTarget - w.sessions
+  // Days left in the week, today included unless already trained.
+  const daysLeft = 7 - w.todayIndex - (w.days[w.todayIndex] ? 1 : 0)
   const setsDiff = w.sets - w.prevSets
   const tonDiff = w.tonnage - w.prevTonnage
   return (
@@ -434,9 +452,13 @@ function WeekBlock({
         unit={`de ${weeklyTarget}`}
         tone={w.sessions >= weeklyTarget ? 'signal' : 'default'}
         caption={
-          w.sessions >= weeklyTarget
+          missing <= 0
             ? 'Objetivo semanal cumplido.'
-            : `Te ${weeklyTarget - w.sessions === 1 ? 'falta 1 sesión' : `faltan ${weeklyTarget - w.sessions} sesiones`} para tu objetivo.`
+            : `Te ${missing === 1 ? 'falta 1 sesión' : `faltan ${missing} sesiones`} para tu objetivo${
+                missing > daysLeft && daysLeft > 0
+                  ? `; ${daysLeft === 1 ? 'queda 1 día' : `quedan ${daysLeft} días`}.`
+                  : '.'
+              }`
         }
       >
         <Ticks

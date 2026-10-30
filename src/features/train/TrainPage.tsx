@@ -9,7 +9,9 @@ import type { Program, WorkoutFull } from '@/data/rows'
 import { tonnage } from '@/domain/training'
 import type { Exercise } from '@/domain/types'
 import { useExerciseLookup } from '@/features/exercise/lookup'
-import { mesoWeek, useStartWorkout } from '@/features/session/useStartWorkout'
+import { dayForDate, mesoWeek, useStartWorkout } from '@/features/session/useStartWorkout'
+import { doneDayIdsThisWeek } from '@/features/today/today'
+import { useNow } from '@/lib/useNow'
 import { dayKeyOf, lastSameDay } from './dayMatch'
 import {
   estimateMinutes,
@@ -79,7 +81,14 @@ export function TrainPage() {
 function ProgramDays({ program }: { program: Program }) {
   const workouts = useWorkouts().data
   const start = useStartWorkout()
-  const meso = mesoWeek(program)
+  const now = useNow()
+  const meso = mesoWeek(program, now)
+  // The day Hoy proposes, marked here too so both screens agree.
+  const nextId = useMemo(
+    () =>
+      workouts ? dayForDate(program, doneDayIdsThisWeek(workouts, program, now), now)?.id : null,
+    [workouts, program, now],
+  )
   // By day id, or by exercises when the day was re-created or the program changed.
   const lastByDay = useMemo(() => {
     const out = new Map<string, WorkoutFull>()
@@ -124,8 +133,11 @@ function ProgramDays({ program }: { program: Program }) {
             return (
               <li key={d.id} className="flex min-h-[64px] items-center gap-3 py-2.5">
                 <div className="min-w-0 flex-1">
-                  <div className="break-words font-display text-[18px] font-semibold uppercase leading-tight tracking-[0.04em]">
-                    {d.name}
+                  <div className="flex items-center gap-2">
+                    <span className="break-words font-display text-[18px] font-semibold uppercase leading-tight tracking-[0.04em]">
+                      {d.name}
+                    </span>
+                    {d.id === nextId && <Badge tone="brand">Toca</Badge>}
                   </div>
                   <div className="text-[12.5px] text-muted">
                     {d.focus ? `${d.focus} · ` : ''}
@@ -136,7 +148,7 @@ function ProgramDays({ program }: { program: Program }) {
                   </div>
                 </div>
                 <Button
-                  variant="soft"
+                  variant={d.id === nextId ? 'primary' : 'soft'}
                   size="sm"
                   disabled={!d.slots.length}
                   aria-label={`Empezar ${d.name}`}

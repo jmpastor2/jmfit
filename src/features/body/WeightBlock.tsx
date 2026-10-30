@@ -57,14 +57,11 @@ export function WeightBlock() {
         unit="kg"
         caption={`${weightSourceLabel(latest, now)} · ${longDate(latest.date)}`}
       />
+      {/* Without weights this week the 7-day mean is an empty box: only the rate then. */}
       <div className="mt-4 grid grid-cols-2 gap-4">
-        <Kpi
-          size="sm"
-          label="Media 7 días"
-          value={s.mean7 != null ? formatNumber(s.mean7, 1) : '—'}
-          unit={s.mean7 != null ? 'kg' : undefined}
-          caption={s.mean7 == null ? 'Sin pesos esta semana.' : undefined}
-        />
+        {s.mean7 != null && (
+          <Kpi size="sm" label="Media 7 días" value={formatNumber(s.mean7, 1)} unit="kg" />
+        )}
         <Kpi
           size="sm"
           label="Ritmo"
