@@ -1,10 +1,11 @@
 import { Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { EQUIPMENT_LABEL, MUSCLE_LABEL, normalize } from '@/content/exercises'
+import { normalize } from '@/content/exercises'
 import { Sheet } from '@/components/ui/Sheet'
 import { Chip } from '@/components/ui/primitives'
 import type { Exercise, Muscle } from '@/domain/types'
 import { suggestAlternatives } from './alternatives'
+import { ExerciseRow } from './ExerciseRow'
 import { useAllExercises } from './lookup'
 
 export const MUSCLE_GROUPS: { label: string; muscles: Muscle[] }[] = [
@@ -78,18 +79,7 @@ export function ExerciseFilters({
   )
 }
 
-export function ExerciseLine({ exercise }: { exercise: Exercise }) {
-  return (
-    <span className="min-w-0">
-      <span className="block text-[15px] font-medium">{exercise.name}</span>
-      <span className="block text-[12.5px] text-muted">
-        {exercise.primary.map((m) => MUSCLE_LABEL[m]).join(' · ')}
-        {exercise.primary.length ? ' · ' : ''}
-        {EQUIPMENT_LABEL[exercise.equipment]}
-      </span>
-    </span>
-  )
-}
+export { ExerciseLine } from './ExerciseRow'
 
 /** Pick an exercise: search, filter by muscle group, tap. */
 export function ExercisePicker({
@@ -112,6 +102,8 @@ export function ExercisePicker({
   const all = useAllExercises()
   const [q, setQ] = useState('')
   const [group, setGroup] = useState<number | null>(null)
+  // One preview open at a time; it closes when the list changes under it.
+  const [preview, setPreview] = useState<string | null>(null)
   const list = useMemo(
     () => filterExercises(all, q, group, suggestFor).slice(0, 80),
     [all, q, group, suggestFor],
@@ -121,52 +113,48 @@ export function ExercisePicker({
     [suggestFor, all, exclude],
   )
   const showSuggestions = suggestions.length > 0 && !q.trim() && group === null
-  const pick = (e: Exercise) => {
-    onPick(e)
+  const close = () => {
+    setPreview(null)
     onClose()
   }
+  const pick = (e: Exercise) => {
+    onPick(e)
+    close()
+  }
+  const row = (e: Exercise, key: string, detail?: string) => (
+    <ExerciseRow
+      key={e.id}
+      exercise={e}
+      {...(detail ? { detail } : {})}
+      open={preview === key}
+      onPreview={() => setPreview(preview === key ? null : key)}
+      onSelect={() => pick(e)}
+      selectLabel={suggestFor ? 'Cambiar por este' : 'Elegir'}
+    />
+  )
+  const filter =
+    <V,>(set: (v: V) => void) =>
+    (v: V) => {
+      setPreview(null)
+      set(v)
+    }
 
   return (
-    <Sheet open={open} onClose={onClose} title={title} tall>
+    <Sheet open={open} onClose={close} title={title} tall>
       <div className="sticky top-0 z-10 -mx-5 bg-panel px-5 pb-2">
-        <ExerciseFilters q={q} onQ={setQ} group={group} onGroup={setGroup} />
+        <ExerciseFilters q={q} onQ={filter(setQ)} group={group} onGroup={filter(setGroup)} />
       </div>
       {showSuggestions && (
         <section className="mb-4">
           <h3 className="spec mb-1 text-gold">Sugerencias para sustituir {suggestFor?.name}</h3>
           <ul className="divide-y divide-line border-y border-gold/30">
-            {suggestions.map(({ exercise: e, why }) => (
-              <li key={e.id}>
-                <button
-                  type="button"
-                  onClick={() => pick(e)}
-                  className="flex w-full items-center justify-between gap-3 py-3 text-left active:bg-panel-2"
-                >
-                  <span className="min-w-0">
-                    <span className="block text-[15px] font-medium">{e.name}</span>
-                    <span className="block text-[12.5px] text-muted">{why}</span>
-                  </span>
-                  {e.videos.length > 0 && <span className="spec shrink-0 text-gold">Vídeo</span>}
-                </button>
-              </li>
-            ))}
+            {suggestions.map(({ exercise: e, why }) => row(e, `s-${e.id}`, why))}
           </ul>
           <h3 className="spec mb-1 mt-5">Todos los ejercicios</h3>
         </section>
       )}
       <ul className="divide-y divide-line">
-        {list.map((e) => (
-          <li key={e.id}>
-            <button
-              type="button"
-              onClick={() => pick(e)}
-              className="flex w-full items-center justify-between gap-3 py-3 text-left active:bg-panel-2"
-            >
-              <ExerciseLine exercise={e} />
-              {e.videos.length > 0 && <span className="spec shrink-0 text-gold">Vídeo</span>}
-            </button>
-          </li>
-        ))}
+        {list.map((e) => row(e, e.id))}
         {!list.length && (
           <li className="py-10 text-center text-[14px] text-muted">Sin resultados</li>
         )}

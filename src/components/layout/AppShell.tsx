@@ -61,13 +61,18 @@ export function AppShell() {
   )
 }
 
-/** A tapped notification focuses the open app and asks it to go to its screen (push-sw.js). */
+/**
+ * A tapped notification focuses the open app and asks it to go to its screen (push-sw.js).
+ * Already there: nothing. Navigating again started the screen over at the top, with the
+ * exercise that was open closed.
+ */
 function useNotificationRouting() {
   const nav = useNavigate()
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
     const onMessage = (e: MessageEvent<{ type?: string; hash?: string }>) => {
-      if (e.data?.type === 'forja:open' && e.data.hash) nav(e.data.hash.replace(/^#/, ''))
+      if (e.data?.type !== 'forja:open' || !e.data.hash) return
+      if (e.data.hash !== window.location.hash) nav(e.data.hash.replace(/^#/, ''))
     }
     navigator.serviceWorker.addEventListener('message', onMessage)
     return () => navigator.serviceWorker.removeEventListener('message', onMessage)

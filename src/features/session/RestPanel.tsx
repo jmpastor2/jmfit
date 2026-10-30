@@ -1,18 +1,24 @@
 import { clsx } from 'clsx'
-import { fmtClock, restTimer, useRest } from './restTimer'
+import { fmtClock, restTimer, useRest, useRestAlarm } from './restTimer'
 import { RestPushToggle } from './RestPushToggle'
 
 /**
  * Rest between sets: a big countdown docked at the bottom, a gold bar that empties, ±15 s and
- * skip. When it reaches zero it says so and stays until dismissed or the next set is logged.
+ * skip. When it reaches zero it says so (vibration, and a beep with `sound`) and stays until
+ * dismissed or the next set is logged. The countdown lives here so only this panel re-renders
+ * every second, not the session around it.
  */
-export function RestPanel() {
+export function RestPanel({ sound }: { sound: boolean }) {
   const { rest, left } = useRest()
+  useRestAlarm(sound, rest?.endsAt, left)
   if (!rest) return null
   const over = left === 0
   const frac = rest.totalSec ? left / rest.totalSec : 0
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-black/95 pb-[max(env(safe-area-inset-bottom),10px)] backdrop-blur-xl">
+    <div
+      data-rest-panel
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-black/95 pb-[max(env(safe-area-inset-bottom),10px)] backdrop-blur-xl"
+    >
       <div className="h-[2px] w-full bg-panel-3">
         <div
           className="h-full bg-gold transition-[width] duration-300 ease-linear"

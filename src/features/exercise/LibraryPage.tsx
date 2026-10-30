@@ -1,16 +1,14 @@
 import { Play } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { MUSCLE_LABEL, TRENDING } from '@/content/exercises'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Chip, SectionTitle } from '@/components/ui/primitives'
 import { useActiveProgram } from '@/data/hooks'
 import type { Exercise } from '@/domain/types'
-import { ExerciseFilters, ExerciseLine, filterExercises } from './ExercisePicker'
+import { ExerciseFilters, filterExercises } from './ExercisePicker'
+import { ExerciseRow, thumbUrl } from './ExerciseRow'
 import { useAllExercises, useExerciseLookup } from './lookup'
-
-const thumb = (e: Exercise) =>
-  e.videos[0] ? `https://i.ytimg.com/vi/${e.videos[0].youtubeId}/mqdefault.jpg` : null
 
 /** Training videos and the exercise catalog: learn the technique, open the history. */
 export function LibraryPage() {
@@ -21,6 +19,8 @@ export function LibraryPage() {
   const [group, setGroup] = useState<number | null>(null)
   const [withVideo, setWithVideo] = useState(false)
   const [trendOnly, setTrendOnly] = useState(false)
+  const [preview, setPreview] = useState<string | null>(null)
+  const nav = useNavigate()
 
   const list = useMemo(
     () =>
@@ -93,7 +93,18 @@ export function LibraryPage() {
 
       {/* The chip row bleeds to the screen edge; clip it there so the page never scrolls sideways. */}
       <div className="-mx-4 overflow-x-clip px-4 pb-1">
-        <ExerciseFilters q={q} onQ={setQ} group={group} onGroup={setGroup} />
+        <ExerciseFilters
+          q={q}
+          onQ={(v) => {
+            setPreview(null)
+            setQ(v)
+          }}
+          group={group}
+          onGroup={(g) => {
+            setPreview(null)
+            setGroup(g)
+          }}
+        />
         <div className="-mt-1 flex items-center justify-between gap-2">
           <div className="flex gap-2">
             <Chip active={trendOnly} onClick={() => setTrendOnly((v) => !v)}>
@@ -108,34 +119,16 @@ export function LibraryPage() {
       </div>
 
       <ul className="divide-y divide-line">
-        {list.map((e) => {
-          const src = thumb(e)
-          return (
-            <li key={e.id}>
-              <Link
-                to={`/exercise/${e.id}`}
-                className="flex min-h-[52px] items-center gap-3 py-2.5 active:bg-panel-2"
-              >
-                {src ? (
-                  <span className="relative block aspect-video w-[88px] shrink-0 overflow-hidden rounded-[6px] border border-line bg-black">
-                    <img
-                      src={src}
-                      alt=""
-                      loading="lazy"
-                      className="absolute inset-0 size-full object-cover opacity-80 grayscale-[35%]"
-                    />
-                  </span>
-                ) : (
-                  <span
-                    aria-hidden
-                    className="block aspect-video w-[88px] shrink-0 rounded-[6px] bg-panel-2"
-                  />
-                )}
-                <ExerciseLine exercise={e} />
-              </Link>
-            </li>
-          )
-        })}
+        {list.map((e) => (
+          <ExerciseRow
+            key={e.id}
+            exercise={e}
+            open={preview === e.id}
+            onPreview={() => setPreview(preview === e.id ? null : e.id)}
+            onSelect={() => nav(`/exercise/${e.id}`)}
+            selectLabel="Ver ficha, historial y récords"
+          />
+        ))}
         {!list.length && (
           <li className="py-10 text-center text-[14px] text-muted">
             {trendOnly || withVideo
@@ -149,7 +142,7 @@ export function LibraryPage() {
 }
 
 function Thumb({ exercise }: { exercise: Exercise }) {
-  const src = thumb(exercise)
+  const src = thumbUrl(exercise)
   return (
     <span className="relative block aspect-video overflow-hidden rounded-[8px] border border-line bg-black">
       {src && (
@@ -157,6 +150,8 @@ function Thumb({ exercise }: { exercise: Exercise }) {
           src={src}
           alt=""
           loading="lazy"
+          decoding="async"
+          crossOrigin="anonymous"
           className="absolute inset-0 size-full object-cover opacity-75 grayscale-[35%]"
         />
       )}

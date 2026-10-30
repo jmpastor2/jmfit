@@ -1,4 +1,4 @@
-# Estado (2026-10-08)
+# Estado (2026-10-30)
 
 Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su esquema en `legacy/`).
 
@@ -57,6 +57,21 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   escáner y archivar objetivo ya pasan por la cola. Días por fecha local (no UTC) en peso corporal
   y objetivos; zoom permitido y campos a 16 px (iOS no amplía al escribir); Inter solo latin y
   latin-ext; el manifiesto admite horizontal.
+
+- 2026-10-30 (fluidez en la sesión): la serie marcada ya no «vuelve atrás». Una lectura del servidor
+  que llegaba con una escritura aún en cola pisaba la serie recién hecha, y en el entreno libre del
+  28 oct quedaron series duplicadas. Ahora las lecturas de series, sesiones, programas y check-ins
+  aplican encima las escrituras pendientes (`readWithPending`). El desplazamiento tras cada serie
+  solo baja lo justo, y suave. Al abrir otra tarjeta, la tocada no se mueve (iOS no tiene scroll
+  anchoring). En el entreno libre la tarjeta no se cierra al acabar sus series. Un doble toque en
+  «Serie hecha» ya no marca dos. El descanso solo repinta su panel, una vez por segundo (antes
+  repintaba la sesión entera cuatro veces por segundo). Al salir de la app y volver (también desde
+  la notificación) vuelve el ejercicio abierto con los valores escritos (`session/sessionUi.ts`).
+  La notificación ya no reinicia la pantalla si ya estás en ella, y una actualización pendiente no
+  recarga la app en segundo plano durante la sesión. Miniaturas del vídeo en el buscador de
+  ejercicios y en la Biblioteca: al tocarlas se abre una vista previa en la propia lista (vídeo y
+  claves) sin elegir ni entrar. Las miniaturas quedan en caché para el gimnasio sin señal. En
+  Técnica, el selector de vídeo es Español/Inglés.
 
 ## Pendiente
 

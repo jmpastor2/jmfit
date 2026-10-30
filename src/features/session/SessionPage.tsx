@@ -9,7 +9,7 @@ import {
   Plus,
   Pencil,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Sheet } from '@/components/ui/Sheet'
@@ -48,25 +48,31 @@ import {
   type QuickFill,
 } from './model'
 import { RestPanel } from './RestPanel'
-import { fmtClock, restTimer, useRestAlarm } from './restTimer'
+import { fmtClock, restTimer } from './restTimer'
+import { saveDraft, saveFocus, savedDraft, savedFocus } from './sessionUi'
 
 /**
- * After a set, bring the next one into the middle of the screen, clear of the rest panel
- * docked at the bottom (it used to sit under the panel and needed a scroll).
+ * Keep the set to do in view, between the sticky header and the rest panel docked at the
+ * bottom. Only scrolls when it is (partly) hidden, and only as far as needed: scrolling a set
+ * that was already visible made the screen jump back up after every set.
  */
-function revealActiveSet() {
-  window.setTimeout(() => {
+function revealActiveSet(behavior: ScrollBehavior) {
+  // Next frame: the rest panel that starts with the set has been laid out by then.
+  requestAnimationFrame(() => {
     const el = document.querySelector<HTMLElement>('[data-active-set]')
     if (!el) return
     const r = el.getBoundingClientRect()
-    // Bottom of the set just above the rest panel (≈170 px); a set taller than the room left
-    // starts under the sticky header instead.
-    const room = window.innerHeight - 170
-    const delta = r.height > room - 90 ? r.top - 90 : r.bottom - room
-    // Instant: a smooth scroll was cancelled by the re-render that follows the saved set.
-    window.scrollTo({ top: window.scrollY + delta })
-    // Long enough for the next card to open and the saved set to render.
-  }, 250)
+    const header = document.querySelector('[data-session-header]')?.getBoundingClientRect()
+    const panel = document.querySelector('[data-rest-panel]')?.getBoundingClientRect()
+    const top = (header?.bottom ?? 0) + 8
+    const bottom = window.innerHeight - (panel?.height ?? 0) - 8
+    let delta = 0
+    if (r.top < top || r.height > bottom - top) delta = r.top - top
+    else if (r.bottom > bottom) delta = r.bottom - bottom
+    if (Math.abs(delta) < 2) return
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    window.scrollBy({ top: delta, behavior: reduce ? 'instant' : behavior })
+  })
 }
 
 /** Stable empties: a fresh `[]` each render would recompute every block. */
@@ -117,7 +123,6 @@ function Session({ workout }: { workout: WorkoutFull }) {
   // Only shapes the quick-fill previews; the sets themselves are stamped when logged.
   const renderNow = useNow(60_000)
   const { save: saveProgram } = useProgramActions()
-  useRestAlarm(me.restSound)
 
   const logged = useMemo(() => sets.filter((s) => s.workoutId === workout.id), [sets, workout.id])
 
@@ -140,8 +145,47 @@ function Session({ workout }: { workout: WorkoutFull }) {
   )
 
   const inSession = useMemo(() => new Set(workout.plan.map((s) => s.exerciseId)), [workout.plan])
-  const firstOpen = blocks.findIndex((b) => b.doneWork < b.plannedWork)
-  const [focus, setFocus] = useState<number | null>(firstOpen === -1 ? null : firstOpen)
+  const [focus, setFocusState] = useState<number | null>(() => {
+    // Back in the app (or reopened after the phone closed it): the exercise that was open.
+    const saved = savedFocus(workout.id)
+    if (saved !== undefined && (saved === null || saved < blocks.length)) return saved
+    const firstOpen = blocks.findIndex((b) => b.doneWork < b.plannedWork)
+    return firstOpen === -1 ? null : firstOpen
+  })
+
+  // Opening one card closes another, often above it. iOS has no scroll anchoring, so the
+  // whole list jumped by the height of the card that closed: keep the card being opened (or
+  // tapped) where it was on screen.
+  const anchor = useRef<{ index: number; top: number } | null>(null)
+  const setFocus = useCallback(
+    (next: number | null, keep: number | null = next) => {
+      const el = keep == null ? null : document.querySelector(`[data-card="${keep}"]`)
+      anchor.current =
+        el && keep != null ? { index: keep, top: el.getBoundingClientRect().top } : null
+      setFocusState(next)
+      saveFocus(workout.id, next)
+    },
+    [workout.id],
+  )
+  // Every commit, before paint: a no-op unless a focus change left an anchor.
+  useLayoutEffect(() => {
+    const a = anchor.current
+    if (!a) return
+    anchor.current = null
+    const el = document.querySelector(`[data-card="${a.index}"]`)
+    if (el) window.scrollBy(0, el.getBoundingClientRect().top - a.top)
+  })
+
+  // The set to do changed (logged, next exercise, card opened): bring it into view. Without
+  // animation the first time, so coming back to the app lands straight on it.
+  const activeRow = focus == null ? -1 : (blocks[focus]?.rows.findIndex((r) => !r.done) ?? -1)
+  const activeKey = activeRow === -1 ? null : `${focus}:${activeRow}`
+  const revealed = useRef(false)
+  useEffect(() => {
+    if (activeKey == null) return
+    revealActiveSet(revealed.current ? 'smooth' : 'instant')
+    revealed.current = true
+  }, [activeKey])
   const [picker, setPicker] = useState<{ mode: 'add' } | { mode: 'swap'; index: number } | null>(
     null,
   )
@@ -181,11 +225,11 @@ function Session({ workout }: { workout: WorkoutFull }) {
               b.doneWork <= block.doneWork,
           )
         : undefined
+    saveDraft(workout.id, null)
     if (partner) {
       restTimer.stop()
       setFocus(partner.index)
       if (prs.length) toast(prMessage(prs[0]!), 'success')
-      revealActiveSet()
       queued(saveSets([set]))
       return
     }
@@ -195,12 +239,13 @@ function Session({ workout }: { workout: WorkoutFull }) {
         isLastWork ? siguienteLabel(blocks, block.index, lookup) : block.exercise.name,
       )
     }
+    // On to the next exercise. With none left (the last one, a free session) this card stays
+    // open with «Añadir serie» at hand, instead of folding the screen away under the thumb.
     if (isLastWork) {
       const next = blocks.findIndex((b, i) => i > block.index && b.doneWork < b.plannedWork)
-      setFocus(next === -1 ? null : next)
+      if (next !== -1) setFocus(next)
     }
     if (prs.length) toast(prMessage(prs[0]!), 'success')
-    revealActiveSet()
     queued(saveSets([set]))
   }
 
@@ -288,7 +333,7 @@ function Session({ workout }: { workout: WorkoutFull }) {
     const q = quickFill(block, workout.id, logged, nowDate())
     if (!q) return
     const next = blocks.findIndex((b, i) => i > block.index && b.doneWork < b.plannedWork)
-    setFocus(next === -1 ? null : next)
+    if (next !== -1) setFocus(next)
     const prs = q.sets.flatMap((s) => detectPRs(s, prior(s.exerciseId, s.id)))
     if (prs.length) toast(prMessage(prs[0]!), 'success')
     queued(saveSets(q.sets))
@@ -316,7 +361,8 @@ function Session({ workout }: { workout: WorkoutFull }) {
   const plannedSets = blocks.reduce((a, b) => a + b.plannedWork, 0)
 
   return (
-    <div className="min-h-dvh pb-[60vh]">
+    // Scroll anchoring off: the focus change above keeps the place by hand, on every browser.
+    <div className="min-h-dvh pb-[60vh] [overflow-anchor:none]">
       <SessionHeader
         workout={workout}
         done={doneSets}
@@ -342,9 +388,10 @@ function Session({ workout }: { workout: WorkoutFull }) {
             <ExerciseCard
               key={`${b.index}-${b.exercise.id}`}
               block={b}
+              workoutId={workout.id}
               total={blocks.length}
               open={focus === b.index}
-              onToggle={() => setFocus(focus === b.index ? null : b.index)}
+              onToggle={() => setFocus(focus === b.index ? null : b.index, b.index)}
               onLog={(row, v) => logSet(b, row, v)}
               onSwap={() => setPicker({ mode: 'swap', index: b.index })}
               onAddSet={() => addSet(b.index)}
@@ -378,7 +425,7 @@ function Session({ workout }: { workout: WorkoutFull }) {
         </Button>
       </div>
 
-      <RestPanel />
+      <RestPanel sound={me.restSound} />
 
       <ExercisePicker
         open={picker !== null}
@@ -449,7 +496,10 @@ function SessionHeader({
   const h = Math.floor(elapsed / 3600)
   const clock = h ? `${h}:${fmtClock(elapsed % 3600).padStart(5, '0')}` : fmtClock(elapsed)
   return (
-    <header className="safe-top sticky top-0 z-30 mb-4 border-b border-line bg-canvas/90 backdrop-blur-xl">
+    <header
+      data-session-header
+      className="safe-top sticky top-0 z-30 mb-4 border-b border-line bg-canvas/90 backdrop-blur-xl"
+    >
       <div className="flex items-center gap-2 px-4 pb-2">
         <button
           type="button"
@@ -491,6 +541,7 @@ interface SetValues {
 
 function ExerciseCard({
   block,
+  workoutId,
   total,
   open,
   onToggle,
@@ -507,6 +558,7 @@ function ExerciseCard({
   allSets,
 }: {
   block: ExerciseBlock
+  workoutId: string
   total: number
   open: boolean
   onToggle: () => void
@@ -540,7 +592,10 @@ function ExerciseCard({
   }, [allSets, exercise.id])
 
   return (
-    <li className={clsx('card overflow-hidden', open && 'border-line-strong')}>
+    <li
+      data-card={block.index}
+      className={clsx('card overflow-hidden', open && 'border-line-strong')}
+    >
       <button
         type="button"
         onClick={onToggle}
@@ -638,6 +693,8 @@ function ExerciseCard({
                   row={row}
                   label={rowLabel(rows, i)}
                   exercise={exercise}
+                  workoutId={workoutId}
+                  draftAt={`${block.index}:${exercise.id}:${i}`}
                   onLog={(v) => onLog(row, v)}
                   barKg={barKg}
                   plates={plates}
@@ -816,6 +873,8 @@ function ActiveSet({
   row,
   label,
   exercise,
+  workoutId,
+  draftAt,
   onLog,
   barKg,
   plates,
@@ -823,25 +882,55 @@ function ActiveSet({
   row: RowState
   label: string
   exercise: Exercise
+  workoutId: string
+  /** Identifies this set for the values typed into it (kept if the app is left). */
+  draftAt: string
   onLog: (v: SetValues) => Promise<void>
   barKg: number
   plates: number[]
 }) {
   const t = row.target
-  const [weight, setWeight] = useState(t.weight == null ? '' : formatNumber(t.weight))
-  const [reps, setReps] = useState(String(t.repMax === t.repMin ? t.repMin : t.repMin))
-  const [rir, setRir] = useState<number | null>(t.kind === 'warmup' ? null : t.rir)
+  const [draft] = useState(() => savedDraft(workoutId, draftAt))
+  const [weight, setWeight] = useState(
+    draft?.weight ?? (t.weight == null ? '' : formatNumber(t.weight)),
+  )
+  const [reps, setReps] = useState(draft?.reps ?? String(t.repMin))
+  const [rir, setRir] = useState<number | null>(
+    draft ? draft.rir : t.kind === 'warmup' ? null : t.rir,
+  )
   // Ramp-up set toggle: only offered on work sets of loaded, untimed exercises.
-  const [ramp, setRamp] = useState(false)
+  const [ramp, setRamp] = useState(draft?.ramp ?? false)
   const canRamp = t.kind !== 'warmup' && !exercise.timed
-  const [busy, setBusy] = useState(false)
   const { toast } = useToast()
+
+  // What is typed survives leaving the app; logging the set clears it.
+  const touched = useRef(Boolean(draft))
+  useEffect(() => {
+    if (touched.current) saveDraft(workoutId, { at: draftAt, weight, reps, rir, ramp })
+  }, [workoutId, draftAt, weight, reps, rir, ramp])
+  const edit =
+    <V,>(set: (v: V) => void) =>
+    (v: V) => {
+      touched.current = true
+      set(v)
+    }
+
+  // This set takes the place of the one just logged, under the same thumb: a double tap on
+  // «Serie hecha» logged both. The button listens only once it has been on screen a moment.
+  const armed = useRef(false)
+  useEffect(() => {
+    const timer = window.setTimeout(() => (armed.current = true), 450)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   const w = parseNum(weight)
   const r = parseNum(reps)
   const step = exercise.increment || 2.5
+  const changeWeight = edit(setWeight)
+  const changeReps = edit(setReps)
+  const changeRir = edit(setRir)
   const bump = (d: number) =>
-    setWeight(formatNumber(Math.max(0, Math.round(((w ?? 0) + d) * 100) / 100)))
+    changeWeight(formatNumber(Math.max(0, Math.round(((w ?? 0) + d) * 100) / 100)))
   const load =
     exercise.equipment === 'barbell' && w != null && w > barKg
       ? platesPerSide(w, barKg, plates)
@@ -862,13 +951,13 @@ function ActiveSet({
         <span className="text-[12.5px] text-ink-2">Objetivo {targetText(t, exercise.timed)}</span>
       </div>
       {exercise.timed ? (
-        <HoldTimer seconds={reps} onSeconds={setReps} target={t.repMin} />
+        <HoldTimer seconds={reps} onSeconds={changeReps} target={t.repMin} />
       ) : (
         <div className="grid grid-cols-2 gap-3">
           <Stepper
             label={exercise.bodyweight ? 'Lastre kg' : 'Kg'}
             value={weight}
-            onChange={setWeight}
+            onChange={changeWeight}
             onMinus={() => bump(-step)}
             onPlus={() => bump(step)}
             decimal
@@ -876,9 +965,9 @@ function ActiveSet({
           <Stepper
             label="Reps"
             value={reps}
-            onChange={setReps}
-            onMinus={() => setReps(String(Math.max(0, (r ?? 0) - 1)))}
-            onPlus={() => setReps(String((r ?? 0) + 1))}
+            onChange={changeReps}
+            onMinus={() => changeReps(String(Math.max(0, (r ?? 0) - 1)))}
+            onPlus={() => changeReps(String((r ?? 0) + 1))}
           />
         </div>
       )}
@@ -887,7 +976,7 @@ function ActiveSet({
           type="button"
           role="switch"
           aria-checked={ramp}
-          onClick={() => setRamp(!ramp)}
+          onClick={() => edit(setRamp)(!ramp)}
           className="mt-3 flex min-h-11 w-full items-center justify-between gap-3 text-left"
         >
           <span>
@@ -922,7 +1011,7 @@ function ActiveSet({
               <button
                 key={n}
                 type="button"
-                onClick={() => setRir(rir === n ? null : n)}
+                onClick={() => changeRir(rir === n ? null : n)}
                 className={clsx(
                   'readout h-11 rounded-[6px] border text-[18px] font-semibold transition',
                   rir === n
@@ -947,25 +1036,19 @@ function ActiveSet({
         block
         size="lg"
         className="mt-3"
-        loading={busy}
         // A loaded exercise needs its weight; bodyweight (lastre 0) and held sets do not.
         disabled={r == null || (w == null && !exercise.bodyweight && !exercise.timed)}
         leading={<Check className="size-5" strokeWidth={2.6} />}
-        onClick={async () => {
-          setBusy(true)
-          try {
-            await onLog(
-              exercise.timed
-                ? { weight: null, reps: r, rir: null }
-                : { weight: w, reps: r, rir: ramp ? null : rir, ramp },
-            )
-            // One ramp set at a time: the next set starts as a work set again.
-            setRamp(false)
-          } catch {
-            toast('No se pudo registrar la serie', 'error')
-          } finally {
-            setBusy(false)
-          }
+        onClick={() => {
+          if (!armed.current) return
+          armed.current = false
+          window.setTimeout(() => (armed.current = true), 450)
+          // The write is queued, not awaited: the next set shows at once.
+          onLog(
+            exercise.timed
+              ? { weight: null, reps: r, rir: null }
+              : { weight: w, reps: r, rir: ramp ? null : rir, ramp },
+          ).catch(() => toast('No se pudo registrar la serie', 'error'))
         }}
       >
         Serie hecha

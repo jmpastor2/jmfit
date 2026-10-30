@@ -36,7 +36,8 @@ self.addEventListener('notificationclick', (event) => {
       const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       const open = windows.find((c) => c.url.startsWith(self.registration.scope))
       if (open) {
-        await open.focus()
+        // Some browsers refuse focus() here; the system brings the app forward anyway.
+        await open.focus().catch(() => {})
         // Same-origin client: the app routes by hash and navigates in place.
         // oxlint-disable-next-line unicorn/require-post-message-target-origin
         open.postMessage({ type: 'forja:open', hash: new URL(target).hash })

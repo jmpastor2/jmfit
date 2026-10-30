@@ -52,6 +52,17 @@ export default defineConfig(({ mode }) => {
               urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
               handler: 'NetworkOnly',
             },
+            {
+              // Exercise video stills: requested with CORS, so they are cached at their real
+              // size and the lists show them without signal in the gym.
+              urlPattern: /^https:\/\/i\.ytimg\.com\/vi\/.*/i,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'video-stills',
+                expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 60 },
+                cacheableResponse: { statuses: [200] },
+              },
+            },
           ],
           // Push and notification-click handlers for rest alarms (public/push-sw.js).
           importScripts: ['push-sw.js'],

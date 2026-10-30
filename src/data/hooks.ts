@@ -176,6 +176,67 @@ export function queued(write: Promise<unknown>): void {
   write.catch(() => {})
 }
 
+type Row = Record<string, unknown>
+
+const sameKeys = (a: Row, b: Row, keys: string[]) => keys.every((k) => a[k] === b[k])
+
+/** One write applied to a list of rows, the way the database will apply it. */
+function applyWrite(rows: Row[], w: WriteVars): Row[] {
+  if ('rows' in w) {
+    const keys = w.onConflict?.split(',').map((k) => k.trim()) ?? ['id']
+    const out = [...rows]
+    for (const r of w.rows as Row[]) {
+      const i = out.findIndex((x) => sameKeys(x, r, keys))
+      if (i === -1) out.push(r)
+      else out[i] = { ...out[i], ...r }
+    }
+    return out
+  }
+  const match = w.match ?? {}
+  const matches = (r: Row) => Object.entries(match).every(([k, v]) => r[k] === v)
+  if ('patch' in w) return rows.map((r) => (matches(r) ? { ...r, ...w.patch } : r))
+  const gone = new Set(w.values)
+  return rows.filter((r) => !(gone.has(String(r[w.column])) && matches(r)))
+}
+
+/**
+ * Read a table and lay over it the writes still on their way. A list read while a write was
+ * queued (the app back from the background, the signal coming back) answered without the set
+ * just logged: the screen dropped it and showed the previous set again. Writes that finished
+ * during the read are laid over too, since the read may have been answered before them.
+ */
+export async function readWithPending<T extends object>(
+  qc: QueryClient,
+  table: string,
+  read: () => Promise<T[]>,
+): Promise<T[]> {
+  const writes = () =>
+    qc
+      .getMutationCache()
+      .getAll()
+      .filter(
+        (m) =>
+          m.options.scope?.id === WRITE_SCOPE &&
+          (m.state.variables as WriteVars | undefined)?.table === table,
+      )
+  const atStart = writes()
+  // Ids grow with every write: anything above these was made after the read started.
+  const lastId = Math.max(0, ...atStart.map((m) => m.mutationId))
+  const pendingAtStart = new Set(
+    atStart.filter((m) => m.state.status === 'pending').map((m) => m.mutationId),
+  )
+  const rows = (await read()) as unknown as Row[]
+  return writes()
+    .filter(
+      (m) =>
+        m.state.status === 'pending' ||
+        (m.state.status === 'success' &&
+          (pendingAtStart.has(m.mutationId) || m.mutationId > lastId)),
+    )
+    .toSorted((a, b) => a.mutationId - b.mutationId)
+    .reduce((acc, m) => applyWrite(acc, m.state.variables as WriteVars), rows) as unknown as T[]
+}
+
 /** Replace or insert items by id in a cached list. */
 function patchList<T extends { id: string }>(
   qc: QueryClient,
@@ -254,13 +315,16 @@ export function usePrograms() {
   const uid = useUid()
   return useQuery({
     queryKey: ['programs', uid],
-    queryFn: async () => {
-      const { data, error } = await requireSupabase()
-        .from('programs')
-        .select('*')
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      return (data as ProgramRow[]).map(toProgram)
+    queryFn: async ({ client }) => {
+      const rows = await readWithPending(client, 'programs', async () => {
+        const { data, error } = await requireSupabase()
+          .from('programs')
+          .select('*')
+          .order('created_at', { ascending: false })
+        if (error) throw error
+        return data as ProgramRow[]
+      })
+      return rows.map(toProgram)
     },
   })
 }
@@ -308,17 +372,19 @@ export function useWorkouts() {
   const uid = useUid()
   return useQuery({
     queryKey: ['workouts', uid],
-    queryFn: async () => {
-      const rows = await fetchAll<WorkoutRow>((from, to) =>
-        requireSupabase()
-          .from('workouts')
-          .select(
-            'id,name,program_id,day_id,started_at,ended_at,notes,session_rpe,bodyweight,deload,plan',
-          )
-          .order('started_at', { ascending: false })
-          .range(from, to),
+    queryFn: async ({ client }) => {
+      const rows = await readWithPending(client, 'workouts', () =>
+        fetchAll<WorkoutRow>((from, to) =>
+          requireSupabase()
+            .from('workouts')
+            .select(
+              'id,name,program_id,day_id,started_at,ended_at,notes,session_rpe,bodyweight,deload,plan',
+            )
+            .order('started_at', { ascending: false })
+            .range(from, to),
+        ),
       )
-      return rows.map(toWorkout)
+      return rows.map(toWorkout).toSorted(byStartDesc)
     },
   })
 }
@@ -328,16 +394,20 @@ export function useSets() {
   const uid = useUid()
   return useQuery({
     queryKey: ['sets', uid],
-    queryFn: async () => {
-      const rows = await fetchAll<SetRow>((from, to) =>
-        requireSupabase()
-          .from('workout_sets')
-          .select('id,workout_id,exercise_id,exercise_index,set_index,kind,weight,reps,rir,done_at')
-          .order('done_at', { ascending: true })
-          .order('id', { ascending: true })
-          .range(from, to),
+    queryFn: async ({ client }) => {
+      const rows = await readWithPending(client, 'workout_sets', () =>
+        fetchAll<SetRow>((from, to) =>
+          requireSupabase()
+            .from('workout_sets')
+            .select(
+              'id,workout_id,exercise_id,exercise_index,set_index,kind,weight,reps,rir,done_at',
+            )
+            .order('done_at', { ascending: true })
+            .order('id', { ascending: true })
+            .range(from, to),
+        ),
       )
-      return rows.map(toSet)
+      return rows.map(toSet).toSorted(bySetOrder)
     },
   })
 }
@@ -488,14 +558,17 @@ export function useCheckins() {
   const uid = useUid()
   return useQuery({
     queryKey: ['checkins', uid],
-    queryFn: async () => {
-      const { data, error } = await requireSupabase()
-        .from('checkins')
-        .select('date,sleep_h,sleep_quality,energy,soreness,stress,resting_hr,hrv_ms,steps')
-        .order('date', { ascending: false })
-        .limit(60)
-      if (error) throw error
-      return (data as CheckinRow[]).map(toCheckin)
+    queryFn: async ({ client }) => {
+      const rows = await readWithPending(client, 'checkins', async () => {
+        const { data, error } = await requireSupabase()
+          .from('checkins')
+          .select('date,sleep_h,sleep_quality,energy,soreness,stress,resting_hr,hrv_ms,steps')
+          .order('date', { ascending: false })
+          .limit(60)
+        if (error) throw error
+        return data as CheckinRow[]
+      })
+      return rows.map(toCheckin).toSorted((a, b) => b.date.localeCompare(a.date))
     },
   })
 }

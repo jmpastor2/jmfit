@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { MUSCLE_LABEL } from '@/content/exercises'
 import { Sheet } from '@/components/ui/Sheet'
+import { Chip } from '@/components/ui/primitives'
 import type { Exercise } from '@/domain/types'
 import { VideoPlayer } from './VideoPlayer'
 
@@ -44,16 +45,15 @@ export function TechniqueBody({ exercise }: { exercise: Exercise }) {
         <div>
           <VideoPlayer key={video.youtubeId} video={video} />
           {exercise.videos.length > 1 && (
-            <div className="mt-2 flex gap-4">
+            // The channel is already under the video: the choice only needs the language.
+            <div className="mt-1 flex flex-wrap gap-1.5">
               {exercise.videos.map((v, i) => (
-                <button
-                  key={v.youtubeId}
-                  type="button"
-                  onClick={() => setWhich(i)}
-                  className={i === which ? 'spec tap-link text-gold' : 'spec tap-link'}
-                >
-                  {v.lang === 'es' ? 'Español' : 'Inglés'} · {v.channel}
-                </button>
+                <Chip key={v.youtubeId} active={i === which} onClick={() => setWhich(i)}>
+                  {v.lang === 'es' ? 'Español' : 'Inglés'}
+                  {exercise.videos.filter((x) => x.lang === v.lang).length > 1
+                    ? ` ${exercise.videos.filter((x, j) => x.lang === v.lang && j <= i).length}`
+                    : ''}
+                </Chip>
               ))}
             </div>
           )}

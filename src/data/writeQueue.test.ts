@@ -2,7 +2,7 @@ import { MutationObserver, type QueryClient } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createQueryClient, isTransientError, shouldRetryWrite } from '@/lib/queryClient'
 import { setSupabaseClient, type TypedSupabase } from '@/lib/supabase'
-import { registerMutationDefaults } from './hooks'
+import { readWithPending, registerMutationDefaults } from './hooks'
 import { onWriteError } from './writeErrors'
 
 type Result = { error: { code?: string; message: string } | null }
@@ -140,5 +140,58 @@ describe('write queue', () => {
     expect(messages).toEqual([])
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['workouts'] })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['sets'] })
+  })
+})
+
+describe('reading while writes are queued', () => {
+  const later = <T>(value: T, ms: number) =>
+    new Promise<T>((resolve) => setTimeout(() => resolve(value), ms))
+
+  it('keeps a set still on its way when the list is read meanwhile', async () => {
+    const { client } = stubClient(() => ({ result: { error: null }, delayMs: 40 }))
+    setSupabaseClient(client)
+    const write = upsert(qc, 'set-2')
+    // The server answers before the set reaches it.
+    const rows = await readWithPending(qc, 'workout_sets', () => later([{ id: 'set-1' }], 5))
+    expect(rows.map((r) => r.id)).toEqual(['set-1', 'set-2'])
+    await write
+  })
+
+  it('keeps a write that finished during a read answered before it', async () => {
+    const { client } = stubClient(() => ({ result: { error: null }, delayMs: 5 }))
+    setSupabaseClient(client)
+    const write = upsert(qc, 'set-2')
+    const rows = await readWithPending(qc, 'workout_sets', async () => {
+      const snapshot = [{ id: 'set-1' }]
+      await write
+      return snapshot
+    })
+    expect(rows.map((r) => r.id)).toEqual(['set-1', 'set-2'])
+  })
+
+  it('applies queued edits and deletes, and ignores other tables and old writes', async () => {
+    const { client } = stubClient(() => ({ result: { error: null } }))
+    setSupabaseClient(client)
+    await upsert(qc, 'old') // done before the read: the server already has it
+    const del = {
+      from: () => ({
+        ...client.from('workout_sets'),
+        delete: () => ({ in: () => later({ error: null }, 30) }),
+      }),
+    }
+    setSupabaseClient(del as unknown as TypedSupabase)
+    const pending = [
+      new MutationObserver<void, unknown, object>(qc, { mutationKey: ['delete'] }).mutate({
+        table: 'workout_sets',
+        column: 'id',
+        values: ['set-1'],
+      }),
+      upsert(qc, 'workout', 'workouts'),
+    ]
+    const rows = await readWithPending(qc, 'workout_sets', () =>
+      later([{ id: 'set-1' }, { id: 'set-3' }], 5),
+    )
+    expect(rows.map((r) => r.id)).toEqual(['set-3'])
+    await Promise.all(pending)
   })
 })

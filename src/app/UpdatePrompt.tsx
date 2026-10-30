@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/Button'
 /**
  * Service-worker updates. A new version never reloads the page under someone who is
  * using it. It is applied silently when nothing has been touched yet (the app has just
- * been opened) or the moment the app goes to the background, so the next time it is
- * opened it is already the new one. The banner stays for the person who is mid-task.
+ * been opened) or the moment the app goes to the background outside a session, so the
+ * next time it is opened it is already the new one. The banner stays for the person who
+ * is mid-task.
  */
 export function UpdatePrompt() {
   const {
@@ -34,7 +35,10 @@ export function UpdatePrompt() {
       return
     }
     const onHide = () => {
-      if (document.visibilityState === 'hidden') void updateServiceWorker(true)
+      // Not in the middle of a session: the update reloads the page, and coming back from
+      // another app meant opening the whole session again. It waits for the summary.
+      if (document.visibilityState === 'hidden' && window.location.hash !== '#/session')
+        void updateServiceWorker(true)
     }
     document.addEventListener('visibilitychange', onHide)
     return () => document.removeEventListener('visibilitychange', onHide)

@@ -62,23 +62,32 @@ function subscribe(l: () => void) {
   return () => listeners.delete(l)
 }
 
-/** Current rest and the seconds left (ticks every 250 ms while a rest runs). */
+const secondsLeft = (rest: RestState | null) =>
+  rest ? Math.max(0, Math.ceil((rest.endsAt - Date.now()) / 1000)) : 0
+
+/**
+ * Current rest and the seconds left. Checks four times a second but only re-renders when the
+ * second shown changes.
+ */
 export function useRest(): { rest: RestState | null; left: number } {
   const rest = useSyncExternalStore(subscribe, () => state)
-  const [now, setNow] = useState(() => Date.now())
+  const [tick, setTick] = useState(() => ({ rest, left: secondsLeft(rest) }))
   useEffect(() => {
+    const update = () =>
+      setTick((prev) => {
+        const left = secondsLeft(rest)
+        return prev.rest === rest && prev.left === left ? prev : { rest, left }
+      })
+    update()
     if (!rest) return
-    const t = window.setInterval(() => setNow(Date.now()), 250)
+    const t = window.setInterval(update, 250)
     return () => window.clearInterval(t)
   }, [rest])
-  const left = rest ? Math.max(0, Math.ceil((rest.endsAt - now) / 1000)) : 0
-  return { rest, left }
+  return { rest, left: tick.rest === rest ? tick.left : secondsLeft(rest) }
 }
 
 /** Fires once when a rest reaches zero: vibration where supported and a short double beep. */
-export function useRestAlarm(enabled: boolean) {
-  const { rest, left } = useRest()
-  const endsAt = rest?.endsAt
+export function useRestAlarm(enabled: boolean, endsAt: number | undefined, left: number) {
   const firedFor = useRef<number | null>(null)
   useEffect(() => {
     if (!endsAt || left > 0 || firedFor.current === endsAt) return

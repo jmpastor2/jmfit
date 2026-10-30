@@ -30,6 +30,8 @@ export function VideoPlayer({ video }: { video: ExerciseVideo }) {
               src={`https://i.ytimg.com/vi/${video.youtubeId}/hqdefault.jpg`}
               alt=""
               loading="lazy"
+              decoding="async"
+              crossOrigin="anonymous"
               className="absolute inset-0 size-full object-cover opacity-70 grayscale-[35%] transition group-active:opacity-50"
             />
             <span className="relative grid size-14 place-items-center rounded-full border border-gold bg-black/70 text-gold">
