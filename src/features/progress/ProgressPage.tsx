@@ -5,7 +5,7 @@ import { MUSCLE_LABEL } from '@/content/exercises'
 import { STRENGTH_LEVEL_LABEL, strengthLevel, type Sex } from '@/content/standards'
 import { VOLUME_LANDMARKS, volumeZone, type VolumeZone } from '@/content/landmarks'
 import { LineChart, shortDate } from '@/components/charts/LineChart'
-import { Delta } from '@/components/kpi/Kpi'
+import { Delta, Kpi } from '@/components/kpi/Kpi'
 import { Meter } from '@/components/kpi/Meter'
 import { Spark } from '@/components/kpi/Spark'
 import { Ticks } from '@/components/kpi/Ticks'
@@ -30,7 +30,7 @@ import {
   hasE1rm,
 } from '@/features/exercise/stats'
 import { RepMaxTable } from './RepMaxTable'
-import { machineRow, muscleSets, strengthRow, type WeekView } from './progressStats'
+import { machineRow, muscleSets, progressTally, strengthRow, type WeekView } from './progressStats'
 
 type View = 'strength' | 'volume' | 'records'
 
@@ -139,6 +139,16 @@ function StrengthView({ sets }: { sets: LoggedSet[] }) {
     [sets, lookup, now],
   )
 
+  const tally = useMemo(
+    () =>
+      progressTally([
+        ...rows,
+        ...machines.map((m) => ({ current: m.current?.weight ?? null, before: m.before })),
+      ]),
+    [rows, machines],
+  )
+  const compared = tally.up + tally.flat + tally.down
+
   if (!rows.length && !machines.length) {
     return (
       <EmptyState
@@ -150,6 +160,21 @@ function StrengthView({ sets }: { sets: LoggedSet[] }) {
 
   return (
     <>
+      {compared > 0 && (
+        <section className="mb-6 grid grid-cols-3 gap-3 border-b border-line pb-5">
+          <Kpi size="sm" label="Suben" value={<span className="text-gold">{tally.up}</span>} />
+          <Kpi size="sm" label="Se mantienen" value={tally.flat} />
+          <Kpi
+            size="sm"
+            label="Bajan"
+            value={<span className={tally.down ? 'text-warn' : undefined}>{tally.down}</span>}
+          />
+          <p className="col-span-3 -mt-2 text-[12px] text-muted">
+            De {compared} ejercicios con comparación: lo mejor de las últimas 4 semanas frente a
+            hace 8 o a tu primera sesión.
+          </p>
+        </section>
+      )}
       {rows.length > 0 && (
         <section className="mb-6">
           {machines.length > 0 && <SectionTitle>Peso libre</SectionTitle>}

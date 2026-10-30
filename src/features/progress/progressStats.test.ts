@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { LoggedSet } from '@/domain/types'
-import { machineRow, muscleSets, strengthRow } from './progressStats'
+import { machineRow, muscleSets, progressTally, strengthRow } from './progressStats'
 
 let n = 0
 const set = (over: Partial<LoggedSet>): LoggedSet => ({
@@ -113,5 +113,18 @@ describe('muscleSets', () => {
     expect(muscleSets(sets, byId, now, 'this')).toEqual({ chest: 2, triceps: 1 })
     expect(muscleSets(sets, byId, now, 'last')).toEqual({ chest: 1, triceps: 0.5 })
     expect(muscleSets(sets, byId, now, 'avg4')).toEqual({ chest: 0.5, triceps: 0.3 })
+  })
+})
+
+describe('progressTally', () => {
+  it('counts lifts up, held (within 1 %) and down, skipping those without comparison', () => {
+    expect(
+      progressTally([
+        { current: 100, before: 90 },
+        { current: 100, before: 99.5 },
+        { current: 80, before: 90 },
+        { current: 80, before: null },
+      ]),
+    ).toEqual({ up: 1, flat: 1, down: 1 })
   })
 })

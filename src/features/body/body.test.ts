@@ -3,6 +3,7 @@ import type { HealthDay, Scan } from '@/domain/types'
 import { emptyScan, parseBoditraxCsv, parseBoditraxDate, splitCsvLine } from './boditrax'
 import { recoveryStats, trendTone } from './recovery'
 import {
+  changeQuality,
   compareScans,
   deltaTone,
   formatInt,
@@ -170,5 +171,39 @@ describe('recovery stats', () => {
   it('handles no data', () => {
     const s = recoveryStats([], 'steps', today)
     expect(s).toMatchObject({ points: [], mean7: null, mean28: null })
+  })
+})
+
+describe('changeQuality', () => {
+  const scan = (date: string, peso: number, grasaKg: number, agua: number): Scan => ({
+    ...emptyScan(date),
+    peso,
+    grasaKg,
+    agua,
+  })
+
+  it('flags a loss that is mostly lean mass, with the protein to aim for', () => {
+    const q = changeQuality(
+      scan('2026-07-10', 80.8, 12.4, 49.8),
+      scan('2026-10-10', 76.4, 11.7, 46.5),
+    )!
+    expect(q).toMatchObject({ weight: -4.4, fat: -0.7, lean: -3.7, water: -3.3, days: 92 })
+    expect(q.fatShare).toBeCloseTo(0.16, 2)
+    expect(q.verdict?.tone).toBe('bad')
+    expect(q.verdict?.text).toContain('138–168 g de proteína')
+  })
+
+  it('praises a loss that is mostly fat and names a recomposition at the same weight', () => {
+    expect(changeQuality(scan('a', 80, 14, 48), scan('b', 78, 12.5, 47.8))?.verdict?.tone).toBe(
+      'good',
+    )
+    expect(changeQuality(scan('a', 80, 14, 48), scan('b', 80.3, 13, 48.5))?.verdict?.text).toMatch(
+      /^Recomposición: 1 kg menos de grasa y 1,3 kg más/,
+    )
+  })
+
+  it('needs both scans with weight and fat', () => {
+    expect(changeQuality(null, scan('b', 80, 12, 48))).toBeNull()
+    expect(changeQuality({ ...emptyScan('a'), peso: 80 }, scan('b', 80, 12, 48))).toBeNull()
   })
 })

@@ -23,6 +23,7 @@ import { AddScanSheet, ImportScansSheet } from './ScanSheets'
 import { WeightBlock } from './WeightBlock'
 import {
   CHART_METRICS,
+  changeQuality,
   compareScans,
   daysBetween,
   formatMetric,
@@ -130,6 +131,7 @@ export function CompositionView() {
     <div className="flex flex-col gap-6">
       <WeightBlock />
       <Hero scans={scans} />
+      <Quality scans={scans} />
       {actions}
       <Trend scans={scans} />
       {scans.length > 1 && <Comparator scans={scans} />}
@@ -145,6 +147,8 @@ function Hero({ scans }: { scans: Scan[] }) {
   const last = scans.at(-1)!
   const prev = scans.length > 1 ? scans.at(-2)! : null
   const back3 = scanBefore(scans, last.date, 90)
+  // «3 meses» only when it is: with a gap between scans the baseline can be much older.
+  const span = back3 ? spanLabel(back3.date, last.date) : ''
   const age = daysBetween(last.date, useNow(3_600_000))
   return (
     <section className="card p-4">
@@ -176,7 +180,7 @@ function Hero({ scans }: { scans: Scan[] }) {
               caption={
                 d3.diff !== null ? (
                   <>
-                    3 meses:{' '}
+                    {span}:{' '}
                     <span className={toneText(d3.tone)}>
                       {formatSigned(m, d3.diff)}
                       {def.unit ? ` ${def.unit}` : ''}
@@ -207,8 +211,84 @@ function DeltaOf({ d }: { d: MetricDelta }) {
   )
 }
 
+/** «3 meses», «7 meses», «1 año»: the real time between two scans. */
+function spanLabel(fromIso: string, toIso: string): string {
+  const months = Math.round(daysBetween(fromIso, new Date(toIso + 'T12:00:00')) / 30.4)
+  if (months >= 12 && months % 12 === 0) return months === 12 ? '1 año' : `${months / 12} años`
+  return `${months} ${months === 1 ? 'mes' : 'meses'}`
+}
+
 const toneText = (t: MetricDelta['tone']) =>
   t === 'good' ? 'text-gold' : t === 'bad' ? 'text-warn' : 'text-ink-2'
+
+/* ───────────── Quality of the change ───────────── */
+
+const signedKg = (n: number) =>
+  `${n > 0 ? '+' : n < 0 ? '−' : ''}${formatMetric('peso', Math.abs(n))}`
+
+/**
+ * Over three months, what the weight change was made of. The scale says the weight; this says
+ * whether it was fat or the muscle being trained for.
+ */
+function Quality({ scans }: { scans: Scan[] }) {
+  const last = scans.at(-1)!
+  const q = changeQuality(scanBefore(scans, last.date, 90), last)
+  if (!q) return null
+  const toneOf = (good: boolean | null) =>
+    good == null ? 'text-ink' : good ? 'text-gold' : 'text-warn'
+  return (
+    <section className="border-y border-line py-5">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="spec text-gold">Calidad del cambio</h2>
+        <span className="text-[12.5px] text-muted">
+          {spanLabel(scanBefore(scans, last.date, 90)!.date, last.date)}
+        </span>
+      </div>
+      <div className="mt-3 grid grid-cols-3 gap-3">
+        <Kpi size="sm" label="Peso" value={signedKg(q.weight)} unit="kg" />
+        <Kpi
+          size="sm"
+          label="Grasa"
+          value={<span className={toneOf(q.fat === 0 ? null : q.fat < 0)}>{signedKg(q.fat)}</span>}
+          unit="kg"
+        />
+        <Kpi
+          size="sm"
+          label="Masa magra"
+          value={
+            <span className={toneOf(q.lean === 0 ? null : q.lean > 0)}>{signedKg(q.lean)}</span>
+          }
+          unit="kg"
+        />
+      </div>
+      {q.fatShare != null && q.weight < 0 && (
+        <p className="mt-3 text-[13px] text-ink-2">
+          De cada kilo perdido,{' '}
+          <span className="readout text-[17px] font-semibold text-ink">
+            {Math.round(q.fatShare * 100)} %
+          </span>{' '}
+          era grasa.
+        </p>
+      )}
+      {q.verdict && (
+        <p
+          className={clsx(
+            'mt-3 border-l-2 pl-3 text-[13.5px] leading-snug',
+            q.verdict.tone === 'bad' ? 'border-warn text-ink' : 'border-gold text-ink-2',
+          )}
+        >
+          {q.verdict.text}
+        </p>
+      )}
+      {q.water != null && q.lean < 0 && q.water < 0 && q.water <= q.lean / 2 && (
+        <p className="mt-2 text-[12px] text-muted">
+          {formatMetric('peso', -q.water)} kg de la masa magra perdida es agua: la báscula la mide y
+          baja con menos hidratos o sal. Confírmalo con el próximo escáner.
+        </p>
+      )}
+    </section>
+  )
+}
 
 /* ───────────── Trend chart ───────────── */
 

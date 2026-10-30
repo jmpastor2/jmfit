@@ -24,6 +24,8 @@ import { useNow } from '@/lib/useNow'
 import { ProgramSwapsSection } from './ProgramSwaps'
 import {
   changeOf,
+  exerciseProgress,
+  type ExerciseProgress,
   previousSameDay,
   sessionMuscleSets,
   sessionRecords,
@@ -82,6 +84,7 @@ function Summary({ workout, workouts }: { workout: WorkoutFull; workouts: Workou
           })
         : null,
       records: sessionRecords(mine, all),
+      progress: exerciseProgress(mine, all),
       muscles: sessionMuscleSets(mine, lookup),
     }
   }, [allSets, scans, workout, workouts, lookup])
@@ -147,6 +150,8 @@ function Summary({ workout, workouts }: { workout: WorkoutFull; workouts: Workou
           </p>
         )}
       </section>
+
+      <ProgressSection rows={data.progress} lookup={lookup} now={now} />
 
       <section className="border-t border-line py-5">
         <h2 className="spec mb-3 text-ink-2">Récords batidos</h2>
@@ -249,5 +254,71 @@ function Compare({
         </>
       }
     />
+  )
+}
+
+const setText = (s: { weight: number | null; reps: number }) =>
+  s.weight ? `${formatNumber(s.weight)} × ${s.reps}` : `${s.reps} reps`
+
+const TREND = {
+  up: { direction: 'up', tone: 'good', text: 'sube' },
+  flat: { direction: 'flat', tone: 'neutral', text: 'igual' },
+  down: { direction: 'down', tone: 'bad', text: 'baja' },
+} as const
+
+/** Exercise by exercise: today's best set against the last time. */
+function ProgressSection({
+  rows,
+  lookup,
+  now,
+}: {
+  rows: ExerciseProgress[]
+  lookup: (id: string) => Exercise
+  now: Date
+}) {
+  const compared = rows.filter((r) => r.trend)
+  if (!compared.length) return null
+  const up = compared.filter((r) => r.trend === 'up').length
+  return (
+    <section className="border-t border-line py-5">
+      <h2 className="spec mb-1 text-ink-2">Ejercicio a ejercicio</h2>
+      <p className="mb-3 text-[14px]">
+        <span className="readout text-[22px] font-semibold text-gold">{up}</span>
+        <span className="text-muted"> de {compared.length} </span>
+        {up === 1 ? 'ejercicio ha subido' : 'ejercicios han subido'} frente a la última vez.
+      </p>
+      <ul className="divide-y divide-line">
+        {rows.map((r) => {
+          const ex = lookup(r.exerciseId)
+          const unit = (v: { weight: number | null; reps: number }) =>
+            ex.timed ? `${v.reps} s` : setText(v)
+          return (
+            <li key={r.exerciseId} className="flex min-h-[52px] items-center gap-3 py-2">
+              <span className="min-w-0 flex-1">
+                <span className="block break-words text-[14.5px] font-medium">{ex.name}</span>
+                <span className="block text-[12.5px] text-muted">
+                  {r.before
+                    ? `Antes ${unit(r.before)} · ${formatShortDate(r.before.date, now)}`
+                    : 'Primera vez'}
+                </span>
+              </span>
+              <span className="flex shrink-0 flex-col items-end">
+                <span className="readout text-[18px] font-semibold">{unit(r.today)}</span>
+                {r.trend && (
+                  <Delta
+                    text={TREND[r.trend].text}
+                    direction={TREND[r.trend].direction}
+                    tone={TREND[r.trend].tone}
+                  />
+                )}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+      <p className="mt-2 text-[12px] text-muted">
+        Mejor serie de cada ejercicio (peso × reps, sin contar la recámara).
+      </p>
+    </section>
   )
 }

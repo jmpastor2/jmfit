@@ -126,3 +126,15 @@ export function muscleSets(
   for (const m of Object.keys(sum) as Muscle[]) sum[m] = Math.round((sum[m]! / 4) * 10) / 10
   return sum
 }
+
+/** How many lifts went up, held or went down (more than 1 % counts as a change). */
+export function progressTally(pairs: readonly { current: number | null; before: number | null }[]) {
+  const out = { up: 0, flat: 0, down: 0 }
+  for (const { current: c, before: b } of pairs) {
+    if (c == null || b == null) continue
+    if (c > b * 1.01) out.up++
+    else if (c < b * 0.99) out.down++
+    else out.flat++
+  }
+  return out
+}

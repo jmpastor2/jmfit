@@ -228,3 +228,77 @@ export function parseDecimal(text: string): number | null {
   if (!/^-?\d+(\.\d+)?$/.test(s)) return null
   return Number(s)
 }
+
+export interface ChangeQuality {
+  days: number
+  weight: number
+  fat: number
+  /** Everything but fat (muscle, water, glycogen, bone): weight − fat. */
+  lean: number
+  water: number | null
+  /** Share of the weight change that is fat (0…1, clamped), when the weight moved. */
+  fatShare: number | null
+  verdict: { tone: Tone; text: string } | null
+}
+
+const fatKg = (s: Scan) =>
+  s.grasaKg ?? (s.peso != null && s.grasa != null ? (s.peso * s.grasa) / 100 : null)
+const round1 = (n: number) => Math.round(n * 10) / 10
+const kg1 = (n: number) => `${n.toLocaleString('es-ES', { maximumFractionDigits: 1 })} kg`
+
+/**
+ * What a change of weight between two scans was made of: fat or lean mass. Losing weight while
+ * most of it is lean mass means too big a deficit or too little protein for someone after muscle;
+ * gaining with most of it fat, too big a surplus. Under 1 kg of change it only names a
+ * recomposition (less fat and more lean at the same weight).
+ */
+export function changeQuality(from: Scan | null, to: Scan): ChangeQuality | null {
+  if (!from || from.peso == null || to.peso == null) return null
+  const f0 = fatKg(from)
+  const f1 = fatKg(to)
+  if (f0 == null || f1 == null) return null
+  const weight = round1(to.peso - from.peso)
+  const fat = round1(f1 - f0)
+  const lean = round1(weight - fat)
+  const water = from.agua != null && to.agua != null ? round1(to.agua - from.agua) : null
+  const moved = Math.abs(weight) >= 1
+  const fatShare = moved ? Math.min(1, Math.max(0, fat / weight)) : null
+  const protein = `${Math.round(to.peso * 1.8)}–${Math.round(to.peso * 2.2)} g de proteína al día`
+  let verdict: ChangeQuality['verdict'] = null
+  if (fatShare != null && weight < 0) {
+    verdict =
+      fatShare >= 0.6
+        ? { tone: 'good', text: 'Lo que pierdes es sobre todo grasa: buen ritmo, mantenlo.' }
+        : fatShare >= 0.3
+          ? {
+              tone: 'neutral',
+              text: `Pierdes grasa, pero casi lo mismo de masa magra. Frena un poco el déficit y llega a ${protein}.`,
+            }
+          : {
+              tone: 'bad',
+              text: `Casi todo lo que pierdes es masa magra, no grasa. Para ganar músculo: come más (sin bajar más de 0,5 kg por semana), ${protein} y series cerca del fallo.`,
+            }
+  } else if (fatShare != null) {
+    verdict =
+      fatShare <= 0.4
+        ? { tone: 'good', text: 'Lo que ganas es sobre todo masa magra: buen superávit.' }
+        : {
+            tone: 'bad',
+            text: 'Buena parte de lo que ganas es grasa: recorta un poco el superávit.',
+          }
+  } else if (fat < 0 && lean > 0) {
+    verdict = {
+      tone: 'good',
+      text: `Recomposición: ${kg1(-fat)} menos de grasa y ${kg1(lean)} más de masa magra con el mismo peso.`,
+    }
+  }
+  return {
+    days: Math.round((t(to.date) - t(from.date)) / DAY),
+    weight,
+    fat,
+    lean,
+    water,
+    fatShare,
+    verdict,
+  }
+}

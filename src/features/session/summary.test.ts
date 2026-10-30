@@ -3,6 +3,7 @@ import type { WorkoutFull } from '@/data/rows'
 import type { LoggedSet, SetKind } from '@/domain/types'
 import {
   changeOf,
+  exerciseProgress,
   previousSameDay,
   sessionMuscleSets,
   sessionRecords,
@@ -172,5 +173,34 @@ describe('changeOf', () => {
     expect(changeOf(10, 8)).toEqual({ direction: 'up', tone: 'good', diff: 2 })
     expect(changeOf(8, 10)).toEqual({ direction: 'down', tone: 'bad', diff: -2 })
     expect(changeOf(5, 5)).toEqual({ direction: 'flat', tone: 'neutral', diff: 0 })
+  })
+})
+
+describe('exerciseProgress', () => {
+  it('compares each exercise with its best set the last time it was done', () => {
+    const before = [
+      set('old', 'bench-press', 70, 8, '2026-10-01T18:00:00'),
+      set('older', 'bench-press', 60, 8, '2026-09-20T18:00:00'),
+      set('old', 'curl', 15, 10, '2026-10-01T18:10:00', 'work', 2, 1),
+      set('old', 'pull-up', 0, 8, '2026-10-01T18:20:00', 'work', 2, 2),
+    ]
+    const today = [
+      set('now', 'bench-press', 50, 10, '2026-10-08T18:00:00', 'warmup'),
+      set('now', 'bench-press', 72.5, 8, '2026-10-08T18:05:00'),
+      set('now', 'curl', 15, 10, '2026-10-08T18:10:00', 'work', 2, 1),
+      set('now', 'pull-up', 0, 6, '2026-10-08T18:20:00', 'work', 2, 2),
+      set('now', 'plank', null, 45, '2026-10-08T18:30:00', 'work', null, 3),
+    ]
+    const p = exerciseProgress(today, [...before, ...today])
+    expect(p.map((x) => [x.exerciseId, x.trend])).toEqual([
+      ['bench-press', 'up'],
+      ['curl', 'flat'],
+      ['pull-up', 'down'],
+      ['plank', null],
+    ])
+    expect(p[0]).toMatchObject({
+      today: { weight: 72.5, reps: 8 },
+      before: { weight: 70, reps: 8, date: '2026-10-01T18:00:00' },
+    })
   })
 })

@@ -82,6 +82,14 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   la serie que volvía atrás (press banca 35×5, press de pecho en máquina 60×6 y elevación lateral
   por detrás 5×10); se dejó la de más peso o, a igual peso, la escrita a mano.
 
+- 2026-10-30 (KPIs): resumen de sesión con «Ejercicio a ejercicio» (mejor serie de hoy frente a la
+  última vez que se hizo cada ejercicio, peso × reps sin recámara; «X de Y han subido»). Cuerpo:
+  «Calidad del cambio» (de qué está hecho el cambio de peso entre escáneres: grasa o masa magra,
+  % de cada kilo perdido que era grasa, consejo con la proteína en gramos y aviso del agua). Las
+  etiquetas «3 meses» de los escáneres dicen el periodo real (con huecos entre escáneres podía
+  ser mucho más). Progreso: cuántos ejercicios suben, se mantienen o bajan. Descartadas las
+  animaciones de free-exercise-db: las fotos vienen de una web comercial, origen dudoso.
+
 ## Pendiente
 
 1. Publicar: GitHub → Settings → Pages → Source: **GitHub Actions** (una vez), y push a `main`.
