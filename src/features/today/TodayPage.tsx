@@ -12,9 +12,11 @@ import {
   useActiveProgram,
   useActiveWorkout,
   useGoals,
+  queued,
   useMe,
   useScans,
   useSets,
+  useUpdateProfile,
   useWorkouts,
 } from '@/data/hooks'
 import type { Program, WorkoutFull } from '@/data/rows'
@@ -24,6 +26,12 @@ import { useExerciseLookup } from '@/features/exercise/lookup'
 import { mesoWeek, useStartWorkout } from '@/features/session/useStartWorkout'
 import { DayPickerSheet } from '@/features/train/DayPickerSheet'
 import { expressOptions, fitToMinutes } from '@/features/train/express'
+import {
+  STALE_DAYS,
+  muscleFreshness,
+  tailoredSession,
+  weekStreak,
+} from '@/features/train/freshness'
 import { cadence, fitsCadence, nextProgramDay, realDaysPerWeek } from '@/features/train/rotation'
 import { PROGRAM_TEMPLATES } from '@/content/programs'
 import { recommendTemplate } from '@/features/programs/recommendTemplate'
@@ -79,6 +87,7 @@ export function TodayPage() {
       <TodayWorkout program={program} now={now} />
       <ReadinessBlock />
       <WeekBlock now={now} weeklyTarget={me.weeklyTarget} program={program} />
+      <MusclesBlock now={now} />
       <RecordsBlock now={now} />
       <BodyBlock now={now} />
       <GoalsBlock now={now} />
@@ -480,6 +489,10 @@ function WeekBlock({
         : null,
     [pace, me.trainingGoal, me.experience],
   )
+  const streak = useMemo(() => weekStreak(workouts ?? [], now), [workouts, now])
+  const updateProfile = useUpdateProfile()
+  // A target far above the real pace reads «1 de 5» every week: offer the one that fits.
+  const realTarget = pace ? realDaysPerWeek(pace.perWeek) : null
   const missing = weeklyTarget - w.sessions
   // Days left in the week, today included unless already trained.
   const daysLeft = 7 - w.todayIndex - (w.days[w.todayIndex] ? 1 : 0)
@@ -507,6 +520,12 @@ function WeekBlock({
           todayIndex={w.todayIndex}
           label={`${w.sessions} sesiones esta semana`}
         />
+        {streak >= 2 && (
+          <p className="mb-2 text-[12.5px] text-ink-2">
+            <span className="readout text-[15px] font-semibold text-gold">{streak}</span> semanas
+            seguidas entrenando.
+          </p>
+        )}
         <div className="mt-1 flex gap-[3px]" aria-hidden>
           {WEEK_LETTERS.map((l, i) => (
             <span
@@ -536,6 +555,16 @@ function WeekBlock({
             <ChevronRight className="size-4 shrink-0" aria-hidden />
           </Link>
         </div>
+      )}
+      {realTarget != null && realTarget < weeklyTarget - 1 && (
+        <Button
+          variant="secondary"
+          size="sm"
+          className="mt-3"
+          onClick={() => queued(updateProfile.mutateAsync({ weeklyTarget: realTarget }))}
+        >
+          Poner mi objetivo en {realTarget} sesiones
+        </Button>
       )}
       <div className="mt-5 grid grid-cols-2 gap-4">
         <Kpi
@@ -572,6 +601,65 @@ function WeekBlock({
         Cambio frente a la semana pasada a estas alturas.
       </p>
       <WeekWarnings now={now} program={program} />
+    </Block>
+  )
+}
+
+/* ───────────── Músculos ───────────── */
+
+/**
+ * How long ago each muscle group was trained, and a session for the ones waiting longest made
+ * of the exercises the person uses most.
+ */
+function MusclesBlock({ now }: { now: Date }) {
+  const sets = useSets().data
+  const active = useActiveWorkout()
+  const lookup = useExerciseLookup()
+  const start = useStartWorkout()
+  const fresh = useMemo(() => muscleFreshness(sets ?? [], lookup, now), [sets, lookup, now])
+  const tailored = useMemo(() => tailoredSession(sets ?? [], lookup, now), [sets, lookup, now])
+  if (!fresh.some((f) => f.days != null)) return null
+  return (
+    <Block title="Hace cuánto entrenas cada músculo">
+      <ul className="grid grid-cols-2 gap-x-6">
+        {fresh.map(({ group, days }) => (
+          <li
+            key={group.id}
+            className="flex min-h-10 items-baseline justify-between gap-2 border-b border-line py-2"
+          >
+            <span className="text-[14px]">{group.label}</span>
+            <span
+              className={clsx(
+                'readout text-[17px] font-semibold',
+                days == null ? 'text-muted' : days >= STALE_DAYS ? 'text-warn' : 'text-ink',
+              )}
+            >
+              {days == null ? '—' : days === 0 ? 'hoy' : days}
+              {days ? <span className="ml-1 font-sans text-[12px] text-muted">d</span> : null}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-[12px] text-muted">
+        Días desde la última serie efectiva como músculo principal. En naranja, {STALE_DAYS} o más.
+      </p>
+      {!active && tailored.slots.length >= 3 && (
+        <Button
+          variant="secondary"
+          block
+          className="mt-4 h-auto min-h-12 py-2 normal-case tracking-normal"
+          onClick={() => void start({ name: 'A medida', plan: tailored.slots })}
+        >
+          <span className="flex flex-col items-center">
+            <span className="font-display text-[15px] font-semibold uppercase tracking-[0.12em]">
+              Sesión a medida
+            </span>
+            <span className="font-sans text-[12.5px] font-normal normal-case tracking-normal text-muted">
+              {tailored.groups.map((g) => g.label).join(' · ')} con tus ejercicios habituales
+            </span>
+          </span>
+        </Button>
+      )}
     </Block>
   )
 }

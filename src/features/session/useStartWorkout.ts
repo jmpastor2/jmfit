@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useActiveWorkout, useScans, useTrainingActions, useWorkouts } from '@/data/hooks'
 import type { Program, WorkoutFull } from '@/data/rows'
-import type { ProgramDay } from '@/domain/types'
+import type { ProgramDay, Slot } from '@/domain/types'
 import { deloadEarned } from '@/features/train/rotation'
 import { newId, planFromDay } from './model'
 
@@ -44,7 +44,7 @@ export function useStartWorkout() {
   const scans = useScans().data
 
   return useCallback(
-    async (opts: { program?: Program; day?: ProgramDay; name?: string } = {}) => {
+    async (opts: { program?: Program; day?: ProgramDay; name?: string; plan?: Slot[] } = {}) => {
       if (active) {
         nav('/session')
         return
@@ -62,7 +62,7 @@ export function useStartWorkout() {
         sessionRpe: null,
         bodyweight: lastWeight,
         deload: opts.program ? mesoWeek(opts.program, new Date(), workouts ?? []).deload : false,
-        plan: opts.day ? planFromDay(opts.day) : [],
+        plan: opts.day ? planFromDay(opts.day) : (opts.plan ?? []),
       }
       nav('/session')
       await saveWorkout(w)

@@ -115,6 +115,12 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   que la sesión sigue contando como ese día). En la sesión, «Serie hecha» se queda en el mismo
   sitio de la pantalla al registrar (`data-log-set`), para apuntar varias seguidas sin mover el dedo.
 
+- 2026-11-11 (músculos, sesión a medida, racha): en Hoy, «Hace cuánto entrenas cada músculo» (días
+  desde la última serie efectiva como músculo principal, naranja desde 10) y «Sesión a medida», que
+  arma una sesión libre con los grupos que más esperan y los ejercicios que más usa la persona
+  (`train/freshness.ts`; `useStartWorkout` admite `plan`). «N semanas seguidas entrenando» y un
+  botón para bajar el objetivo semanal al ritmo real cuando sobra por más de una sesión.
+
 ## Pendiente
 
 1. Publicar: GitHub → Settings → Pages → Source: **GitHub Actions** (una vez), y push a `main`.
