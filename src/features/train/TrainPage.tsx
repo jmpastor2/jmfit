@@ -9,10 +9,10 @@ import type { Program, WorkoutFull } from '@/data/rows'
 import { tonnage } from '@/domain/training'
 import type { Exercise } from '@/domain/types'
 import { useExerciseLookup } from '@/features/exercise/lookup'
-import { dayForDate, mesoWeek, useStartWorkout } from '@/features/session/useStartWorkout'
-import { doneDayIdsThisWeek } from '@/features/today/today'
+import { mesoWeek, useStartWorkout } from '@/features/session/useStartWorkout'
 import { useNow } from '@/lib/useNow'
 import { dayKeyOf, lastSameDay } from './dayMatch'
+import { nextProgramDay } from './rotation'
 import {
   estimateMinutes,
   formatInt,
@@ -82,11 +82,10 @@ function ProgramDays({ program }: { program: Program }) {
   const workouts = useWorkouts().data
   const start = useStartWorkout()
   const now = useNow()
-  const meso = mesoWeek(program, now)
+  const meso = mesoWeek(program, now, workouts)
   // The day Hoy proposes, marked here too so both screens agree.
   const nextId = useMemo(
-    () =>
-      workouts ? dayForDate(program, doneDayIdsThisWeek(workouts, program, now), now)?.id : null,
+    () => (workouts ? nextProgramDay(program, workouts, now).day?.id : null),
     [workouts, program, now],
   )
   // By day id, or by exercises when the day was re-created or the program changed.
@@ -108,7 +107,11 @@ function ProgramDays({ program }: { program: Program }) {
         <div className="min-w-0">
           <span className="spec text-gold">
             Programa activo ·{' '}
-            {meso.deload ? 'Semana de descarga' : `Semana ${meso.week} de ${program.mesoWeeks}`}
+            {meso.deload
+              ? 'Semana de descarga'
+              : meso.postponed
+                ? 'Sin descarga'
+                : `Semana ${meso.week} de ${program.mesoWeeks}`}
           </span>
           <h2 className="mt-0.5 break-words font-display text-[24px] font-semibold uppercase leading-tight tracking-[0.04em]">
             {program.name}

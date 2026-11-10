@@ -117,6 +117,45 @@ export const PROGRAM_TEMPLATES: readonly ProgramTemplate[] = [
     ],
   },
   {
+    id: 'jm-full-arms-3',
+    name: 'Cuerpo completo + brazos · 3 días',
+    description:
+      'Tres sesiones de cuerpo completo con bíceps y tríceps en todas. Sin días fijos: haz la siguiente cuando puedas. Con dos o tres sesiones por semana cada músculo recibe estímulo dos veces, lo que un programa de cinco días no da a ese ritmo.',
+    goal: ['hypertrophy', 'recomp'],
+    level: ['intermediate', 'advanced'],
+    daysPerWeek: 3,
+    mesoWeeks: 6,
+    days: [
+      day('jmf3-a', 'Completo A', 'Pecho · Espalda · Cuádriceps · Brazos', null, [
+        s('bench-press', 4, 6, 8),
+        s('seated-cable-row', 4, 8, 10),
+        s('leg-press', 3, 10, 12),
+        s('machine-shoulder-press', 3, 8, 10),
+        s('barbell-curl', 3, 8, 10),
+        s('skull-crusher', 3, 10, 12),
+        s('cable-lateral-raise', 3, 12, 15),
+      ]),
+      day('jmf3-b', 'Completo B', 'Espalda · Isquios · Hombro · Brazos', null, [
+        s('lat-pulldown', 4, 8, 10),
+        s('smith-incline-press', 3, 8, 10),
+        s('romanian-deadlift', 3, 8, 10),
+        s('super-rom-lateral-raise', 3, 12, 15),
+        s('incline-dumbbell-curl', 3, 10, 12, { superset: 'A', note: SUPERSET, restSec: 0 }),
+        s('overhead-cable-extension', 3, 10, 12, { superset: 'A', note: SUPERSET }),
+        s('hammer-curl', 2, 10, 12),
+      ]),
+      day('jmf3-c', 'Completo C', 'Pierna · Pecho · Espalda · Brazos', null, [
+        s('squat', 4, 6, 8),
+        s('pull-up', 3, 6, 8, { note: 'Lastradas' }),
+        s('dips', 3, 8, 10, { note: 'Lastrados' }),
+        s('lying-leg-curl', 3, 10, 12),
+        s('preacher-curl', 3, 8, 10),
+        s('triceps-pushdown', 3, 10, 12),
+        s('reverse-pec-deck', 3, 12, 15),
+      ]),
+    ],
+  },
+  {
     id: 'ppl-6',
     name: 'Empuje · Tirón · Pierna · 6 días',
     description:

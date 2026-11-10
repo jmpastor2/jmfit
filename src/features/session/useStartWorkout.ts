@@ -3,15 +3,33 @@ import { useNavigate } from 'react-router-dom'
 import { useActiveWorkout, useScans, useTrainingActions, useWorkouts } from '@/data/hooks'
 import type { Program, WorkoutFull } from '@/data/rows'
 import type { ProgramDay } from '@/domain/types'
+import { deloadEarned } from '@/features/train/rotation'
 import { newId, planFromDay } from './model'
 
-/** Week of the mesocycle (1-based) on `date`, and whether it is the deload week. */
-export function mesoWeek(program: Program, date = new Date()): { week: number; deload: boolean } {
+export interface MesoWeek {
+  week: number
+  deload: boolean
+  /** The calendar says deload, but too little was trained lately for one to be needed. */
+  postponed: boolean
+}
+
+/**
+ * Week of the mesocycle (1-based) on `date`, and whether it is the deload week. With the
+ * workouts, a deload is only applied when the last three weeks earned it: cutting sets after
+ * weeks of one or two sessions takes work away from someone who is short of it.
+ */
+export function mesoWeek(
+  program: Program,
+  date = new Date(),
+  workouts?: readonly WorkoutFull[],
+): MesoWeek {
   const start = new Date(program.startedOn + 'T00:00:00')
   const days = Math.floor((date.getTime() - start.getTime()) / 86_400_000)
   const cycle = program.mesoWeeks + 1 // the deload week closes each block
   const week = (((Math.floor(days / 7) % cycle) + cycle) % cycle) + 1
-  return { week, deload: week === cycle }
+  const planned = week === cycle
+  const postponed = planned && workouts != null && !deloadEarned(workouts, date)
+  return { week, deload: planned && !postponed, postponed }
 }
 
 /**
@@ -43,7 +61,7 @@ export function useStartWorkout() {
         notes: null,
         sessionRpe: null,
         bodyweight: lastWeight,
-        deload: opts.program ? mesoWeek(opts.program).deload : false,
+        deload: opts.program ? mesoWeek(opts.program, new Date(), workouts ?? []).deload : false,
         plan: opts.day ? planFromDay(opts.day) : [],
       }
       nav('/session')
@@ -51,18 +69,4 @@ export function useStartWorkout() {
     },
     [active, nav, saveWorkout, workouts, scans],
   )
-}
-
-/** The program day planned for a date: same weekday first, otherwise the next one not yet done this week. */
-export function dayForDate(
-  program: Program | null,
-  doneDayIds: ReadonlySet<string>,
-  date = new Date(),
-): ProgramDay | null {
-  if (!program || !program.days.length) return null
-  const wd = (date.getDay() + 6) % 7
-  const exact = program.days.find((d) => d.weekday === wd)
-  if (exact) return exact
-  if (program.days.some((d) => d.weekday !== null)) return null // a rest day in a fixed plan
-  return program.days.find((d) => !doneDayIds.has(d.id)) ?? program.days[0] ?? null
 }

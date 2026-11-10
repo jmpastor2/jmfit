@@ -21,8 +21,11 @@ import type { Program, WorkoutFull } from '@/data/rows'
 import { formatNumber, goalProgress } from '@/domain/training'
 import type { Exercise, ProgramDay, ReadinessLevel, Scan } from '@/domain/types'
 import { useExerciseLookup } from '@/features/exercise/lookup'
-import { dayForDate, mesoWeek, useStartWorkout } from '@/features/session/useStartWorkout'
+import { mesoWeek, useStartWorkout } from '@/features/session/useStartWorkout'
 import { DayPickerSheet } from '@/features/train/DayPickerSheet'
+import { cadence, fitsCadence, nextProgramDay, realDaysPerWeek } from '@/features/train/rotation'
+import { PROGRAM_TEMPLATES } from '@/content/programs'
+import { recommendTemplate } from '@/features/programs/recommendTemplate'
 import {
   PR_LABEL,
   estimateMinutes,
@@ -40,7 +43,6 @@ import { CheckinSheet } from './CheckinSheet'
 import {
   SCAN_STALE_DAYS,
   agoLabel,
-  doneDayIdsThisWeek,
   finishedToday,
   goalCurrent,
   goalTitle,
@@ -57,7 +59,8 @@ export function TodayPage() {
   const me = useMe()
   const now = useNow()
   const { program } = useActiveProgram()
-  const meso = program ? mesoWeek(program, now) : null
+  const workouts = useWorkouts().data
+  const meso = program ? mesoWeek(program, now, workouts) : null
   const name = me.displayName.trim()
 
   return (
@@ -68,7 +71,7 @@ export function TodayPage() {
         title={name ? `${greeting(now)}, ${name}` : greeting(now)}
         subtitle={
           program && meso
-            ? `${program.name} · ${meso.deload ? 'Semana de descarga' : `Semana ${meso.week} de ${program.mesoWeeks}`}`
+            ? `${program.name} · ${meso.deload ? 'Semana de descarga' : meso.postponed ? 'Sin descarga: vienes de pocas sesiones' : `Semana ${meso.week} de ${program.mesoWeeks}`}`
             : undefined
         }
       />
@@ -143,10 +146,7 @@ function TodayWorkout({ program, now }: { program: Program | null; now: Date }) 
   const [picking, setPicking] = useState(false)
   const workouts = workoutsQ.data
 
-  const doneIds = useMemo(
-    () => (program && workouts ? doneDayIdsThisWeek(workouts, program, now) : new Set<string>()),
-    [program, workouts, now],
-  )
+  const next = useMemo(() => nextProgramDay(program, workouts ?? [], now), [program, workouts, now])
   const done = useMemo(() => (workouts ? finishedToday(workouts, now) : null), [workouts, now])
 
   if (workoutsQ.isPending) {
@@ -210,7 +210,7 @@ function TodayWorkout({ program, now }: { program: Program | null; now: Date }) 
     )
   }
 
-  const day = dayForDate(program, doneIds, now)
+  const { day } = next
 
   // A program session already finished today closes the day; a free one leaves the plan up.
   if (done && (done.programId === program.id || !day)) {
@@ -250,7 +250,7 @@ function TodayWorkout({ program, now }: { program: Program | null; now: Date }) 
     )
   }
 
-  const meso = mesoWeek(program, now)
+  const meso = mesoWeek(program, now, workouts)
   const totalSets = day.slots.reduce((t, s) => t + s.sets, 0)
   return (
     <Hero
@@ -260,6 +260,12 @@ function TodayWorkout({ program, now }: { program: Program | null; now: Date }) 
     >
       <HeroTitle>{day.name}</HeroTitle>
       {day.focus && <p className="mt-0.5 text-[13.5px] text-ink-2">{day.focus}</p>}
+      {next.mode === 'rotation' && next.last && (
+        <p className="mt-1 text-[12.5px] text-muted">
+          Siguiente en el orden del programa: el último fue {next.last.day.name} (
+          {formatShortDate(next.last.workout.startedAt, now)}).
+        </p>
+      )}
       {day.slots.length ? (
         <ul className="mt-3 divide-y divide-line">
           {day.slots.map((s) => (
@@ -439,6 +445,23 @@ function WeekBlock({
     () => weekSummary(workouts ?? [], sets ?? [], now, opts),
     [workouts, sets, now, opts],
   )
+  // Three weeks of history say how often the person really trains, and whether the plan fits.
+  const pace = useMemo(
+    () => (program && workouts ? cadence(program, workouts, now) : null),
+    [program, workouts, now],
+  )
+  const me = useMe()
+  const better = useMemo(
+    () =>
+      pace && !fitsCadence(pace)
+        ? (recommendTemplate(PROGRAM_TEMPLATES, {
+            trainingGoal: me.trainingGoal,
+            experience: me.experience,
+            weeklyTarget: realDaysPerWeek(pace.perWeek),
+          })?.template ?? null)
+        : null,
+    [pace, me.trainingGoal, me.experience],
+  )
   const missing = weeklyTarget - w.sessions
   // Days left in the week, today included unless already trained.
   const daysLeft = 7 - w.todayIndex - (w.days[w.todayIndex] ? 1 : 0)
@@ -480,6 +503,22 @@ function WeekBlock({
           ))}
         </div>
       </Kpi>
+      {program && pace && better && better.id !== program.templateId && (
+        <div className="mt-4 border-l-2 border-warn pl-3 text-[13.5px] leading-snug">
+          <p>
+            Entrenas {formatNumber(pace.perWeek, 1)} veces por semana y tu programa es de{' '}
+            {program.days.length} días: cada sesión vuelve cada {pace.cycleDays} días. Un músculo
+            crece con estímulo unas 2 veces por semana.
+          </p>
+          <Link
+            to={`/programs?template=${better.id}`}
+            className="mt-1 flex min-h-11 items-center gap-1 font-medium text-gold"
+          >
+            Te encaja «{better.name}»
+            <ChevronRight className="size-4 shrink-0" aria-hidden />
+          </Link>
+        </div>
+      )}
       <div className="mt-5 grid grid-cols-2 gap-4">
         <Kpi
           size="sm"

@@ -11,8 +11,16 @@ import { useExerciseLookup } from '@/features/exercise/lookup'
 import { mainLifts } from '@/features/exercise/stats'
 import { goalSuggestions, type GoalSuggestion } from '@/features/goals/goalValues'
 import { mesoWeek } from '@/features/session/useStartWorkout'
+import { daysAhead, nextProgramDay } from '@/features/train/rotation'
 import { doneDayIdsThisWeek, finishedToday } from './today'
-import { lostLine, recoverSentence, skipsLine, volumeGaps, weekSkips } from './weekAlerts'
+import {
+  lostLine,
+  recoverSentence,
+  skipsLine,
+  volumeGaps,
+  weekdayIndex,
+  weekSkips,
+} from './weekAlerts'
 
 /** Jose Manuel's specialisation: always warned about when behind, even outside the top 3. */
 const FOCUS_MUSCLES: readonly Muscle[] = ['biceps', 'triceps']
@@ -42,12 +50,21 @@ export function WeekWarnings({ now, program }: { now: Date; program: Program | n
   const sets = setsQ.data
 
   const gaps = useMemo(() => {
-    if (!program || !workouts || !sets || mesoWeek(program, now).deload) return []
+    if (!program || !workouts || !sets || mesoWeek(program, now, workouts).deload) return []
+    const trainedToday = finishedToday(workouts, now) != null
+    const next = nextProgramDay(program, workouts, now)
+    // Off the calendar the days to come are the next ones in program order, one per day left
+    // this week (without weekday: nobody knows which day they will be done).
+    const ahead =
+      next.mode === 'rotation' && next.day
+        ? daysAhead(program, next.day, 7 - weekdayIndex(now)).slice(trainedToday ? 1 : 0)
+        : undefined
     return volumeGaps({
       days: program.days,
       sets,
       doneDayIds: doneDayIdsThisWeek(workouts, program, now),
-      trainedToday: finishedToday(workouts, now) != null,
+      trainedToday,
+      ...(ahead ? { ahead: ahead.map((d) => ({ ...d, weekday: null })) } : {}),
       lookup,
       now,
       focus: FOCUS_MUSCLES,

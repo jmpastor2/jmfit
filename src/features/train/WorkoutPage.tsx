@@ -79,6 +79,7 @@ function WorkoutDetail({ workout }: { workout: WorkoutFull }) {
   const allSets = useSets().data
   const scans = useScans().data
   const programs = usePrograms().data
+  const workouts = useWorkouts().data
   const active = useActiveWorkout()
   const lookup = useExerciseLookup()
   const { saveWorkout, deleteWorkout, saveSets, deleteSets } = useTrainingActions()
@@ -139,7 +140,7 @@ function WorkoutDetail({ workout }: { workout: WorkoutFull }) {
       notes: null,
       sessionRpe: null,
       bodyweight: workout.bodyweight ?? scans?.at(-1)?.peso ?? null,
-      deload: program ? mesoWeek(program).deload : false,
+      deload: program ? mesoWeek(program, new Date(), workouts ?? []).deload : false,
       plan,
     }
     nav('/session')

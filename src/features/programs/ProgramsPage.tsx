@@ -1,18 +1,20 @@
 import { Archive, ChevronRight, Pencil, Plus, RotateCcw, Sparkles } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Meter } from '@/components/kpi/Meter'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Sheet } from '@/components/ui/Sheet'
 import { useToast } from '@/components/ui/Toast'
 import { Chip, EmptyState, SectionTitle, Skeleton } from '@/components/ui/primitives'
-import { PROGRAM_TEMPLATES } from '@/content/programs'
-import { useMe, useProgramActions, usePrograms } from '@/data/hooks'
+import { PROGRAM_TEMPLATES, templateById } from '@/content/programs'
+import { useMe, useProgramActions, usePrograms, useWorkouts } from '@/data/hooks'
 import type { Program } from '@/data/rows'
 import type { Goal, ProgramTemplate } from '@/domain/types'
 import { useExerciseLookup } from '@/features/exercise/lookup'
 import { mesoWeek } from '@/features/session/useStartWorkout'
+import { cadence, fitsCadence, realDaysPerWeek } from '@/features/train/rotation'
+import { useNow } from '@/lib/useNow'
 import {
   EXPERIENCE_LABEL,
   formatDate,
@@ -34,7 +36,13 @@ export function ProgramsPage() {
   const programs = usePrograms()
   const { save, activate } = useProgramActions()
   const [goal, setGoal] = useState<Goal | null>(null)
-  const [preview, setPreview] = useState<ProgramTemplate | null>(null)
+  const workouts = useWorkouts().data
+  // `?template=<id>` (the pace warning on Hoy) opens that template straight away.
+  const [params] = useSearchParams()
+  const [preview, setPreview] = useState<ProgramTemplate | null>(
+    () => templateById(params.get('template') ?? '') ?? null,
+  )
+  const [now] = useState(() => new Date())
   const [busy, setBusy] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
 
@@ -43,14 +51,20 @@ export function ProgramsPage() {
   const others = list.filter((p) => p.id !== active?.id && !p.archived)
   const archived = list.filter((p) => p.id !== active?.id && p.archived)
 
+  // The days really trained win over the days planned once the active program does not fit them.
+  const pace = useMemo(
+    () => (active && workouts ? cadence(active, workouts, now) : null),
+    [active, workouts, now],
+  )
+  const realDays = pace && !fitsCadence(pace) ? realDaysPerWeek(pace.perWeek) : null
   const fit = useMemo(
     () =>
       recommendTemplate(PROGRAM_TEMPLATES, {
         trainingGoal: me.trainingGoal,
         experience: me.experience,
-        weeklyTarget: me.weeklyTarget,
+        weeklyTarget: realDays ?? me.weeklyTarget,
       }),
-    [me.trainingGoal, me.experience, me.weeklyTarget],
+    [me.trainingGoal, me.experience, me.weeklyTarget, realDays],
   )
   const goals = useMemo(
     () =>
@@ -240,7 +254,8 @@ export function ProgramsPage() {
             className="card mb-4 block w-full border-signal/30 p-4 text-left active:bg-panel-2"
           >
             <span className="spec flex items-center gap-1.5 text-gold">
-              <Sparkles className="size-3.5" aria-hidden /> Recomendada para ti
+              <Sparkles className="size-3.5" aria-hidden />{' '}
+              {realDays ? 'Recomendada para tu ritmo real' : 'Recomendada para ti'}
             </span>
             <span className="mt-1 block font-display text-[22px] font-semibold uppercase leading-tight tracking-[0.04em]">
               {fit.template.name}
@@ -303,7 +318,8 @@ export function ProgramsPage() {
 function ActiveBlock({ program, onEdit }: { program: Program; onEdit: () => void }) {
   const today = todayKey()
   const future = program.startedOn > today
-  const { week, deload } = mesoWeek(program)
+  const workouts = useWorkouts().data
+  const { week, deload, postponed } = mesoWeek(program, useNow(), workouts)
   const total = program.mesoWeeks + 1
   return (
     <section className="card p-4">
@@ -333,15 +349,19 @@ function ActiveBlock({ program, onEdit }: { program: Program; onEdit: () => void
           <>
             <div className="flex items-baseline gap-2">
               <span className="readout text-[30px] font-semibold leading-none">
-                {deload ? 'Descarga' : `Semana ${week}`}
+                {deload ? 'Descarga' : postponed ? 'Sin descarga' : `Semana ${week}`}
               </span>
-              {!deload && <span className="text-[13px] text-muted">de {program.mesoWeeks}</span>}
+              {!deload && !postponed && (
+                <span className="text-[13px] text-muted">de {program.mesoWeeks}</span>
+              )}
             </div>
             <Meter value={week} max={total} className="mt-2" />
             <p className="mt-1.5 text-[12.5px] text-muted">
               {deload
                 ? 'Semana de descarga: menos series y peso para llegar fresco al siguiente bloque.'
-                : `Descarga en la semana ${total} del mesociclo.`}
+                : postponed
+                  ? 'Tocaba descarga, pero vienes de pocas sesiones: esta semana se entrena normal.'
+                  : `Descarga en la semana ${total} del mesociclo.`}
             </p>
           </>
         )}

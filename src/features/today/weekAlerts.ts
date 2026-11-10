@@ -82,6 +82,11 @@ export interface VolumeGapInput {
   trainedToday: boolean
   lookup: Lookup
   now: Date
+  /**
+   * The days still to come, when the caller knows better than the weekdays (someone off the
+   * calendar follows the program order: see `train/rotation`).
+   */
+  ahead?: readonly ProgramDay[]
   /** Muscles always shown when behind (the person's specialisation). */
   focus?: readonly Muscle[]
   /** How many of the other muscles to show. */
@@ -101,7 +106,7 @@ export function volumeGaps(input: VolumeGapInput): VolumeGap[] {
     days.flatMap((d) => d.slots),
     lookup,
   )
-  const ahead = remainingDays(days, input.doneDayIds, now, input.trainedToday)
+  const ahead = input.ahead ?? remainingDays(days, input.doneDayIds, now, input.trainedToday)
   const aheadSets = setsByMuscle(
     ahead.flatMap((d) => d.slots),
     lookup,

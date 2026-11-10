@@ -90,6 +90,17 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   ser mucho más). Progreso: cuántos ejercicios suben, se mantienen o bajan. Descartadas las
   animaciones de free-exercise-db: las fotos vienen de una web comercial, origen dudoso.
 
+- 2026-11-10 (la app se ajusta a cómo se entrena de verdad; uso real: 2 sesiones/semana con un
+  programa de 5 días de calendario fijo, Pierna sin hacer desde el 15 oct): el día que toca sigue el
+  calendario solo mientras se cumple; fuera de él es el siguiente al último hecho, en orden
+  (`train/rotation.ts`, sustituye a `dayForDate`), en Hoy, Entrenar y los avisos de la semana. Aviso
+  de ritmo en Hoy (sesiones/semana reales, cada cuántos días vuelve cada sesión) con la plantilla que
+  encaja, y Programas recomienda por el ritmo real. Plantilla nueva `jm-full-arms-3` (cuerpo completo
+  + brazos, 3 días sin día fijo). La descarga solo se aplica con 8 sesiones en las 3 semanas previas
+  (`mesoWeek(…, workouts)` → `postponed`). `scripts/snapshot.mjs` usa `--read-only` (la CLI nueva lo
+  exige). Pendiente: `orbe_plan` (SQL) sigue con la lógica antigua de calendario; alinearlo es una
+  migración en producción.
+
 ## Pendiente
 
 1. Publicar: GitHub → Settings → Pages → Source: **GitHub Actions** (una vez), y push a `main`.

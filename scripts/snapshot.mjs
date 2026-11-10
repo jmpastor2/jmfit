@@ -34,7 +34,7 @@ for (const [table, where] of Object.entries(TABLES)) {
   writeFileSync(file, sql)
   const raw = execFileSync(
     'npx',
-    ['supabase', 'db', 'query', '--linked=false', '--project-ref', REF, '-f', file],
+    ['supabase', 'db', 'query', '--read-only', '--linked=false', '--project-ref', REF, '-f', file],
     { encoding: 'utf8', shell: true, maxBuffer: 64 * 1024 * 1024 },
   )
   const json = JSON.parse(raw.slice(raw.indexOf('{')))

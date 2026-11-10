@@ -131,6 +131,7 @@ describe('program templates', () => {
     expect(ids).toEqual(
       expect.arrayContaining([
         'jm-ppl-arms-5',
+        'jm-full-arms-3',
         'ppl-6',
         'upper-lower-4',
         'full-body-3',

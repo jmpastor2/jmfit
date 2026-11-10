@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { WorkoutFull } from '@/data/rows'
 import type { Exercise, LoggedSet, Slot } from '@/domain/types'
 import { buildBlock, historyFor, nextSetIndex, quickFill, topSets } from './model'
-import { mesoWeek, dayForDate } from './useStartWorkout'
+import { mesoWeek } from './useStartWorkout'
 
 const bench: Exercise = {
   id: 'bench-press',
@@ -161,45 +161,27 @@ describe('mesoWeek', () => {
     archived: false,
   }
   it('counts weeks from the start and closes each block with a deload week', () => {
-    expect(mesoWeek(program, new Date('2026-09-08T12:00:00'))).toEqual({ week: 1, deload: false })
-    expect(mesoWeek(program, new Date('2026-09-30T12:00:00'))).toEqual({ week: 4, deload: false })
-    expect(mesoWeek(program, new Date('2026-10-06T12:00:00'))).toEqual({ week: 5, deload: true })
-    expect(mesoWeek(program, new Date('2026-10-13T12:00:00'))).toEqual({ week: 1, deload: false })
-  })
-})
-
-describe('dayForDate', () => {
-  const day = (id: string, weekday: number | null) => ({
-    id,
-    name: id,
-    focus: '',
-    weekday,
-    slots: [],
-  })
-  it('uses the weekday of a fixed plan and reports rest days as null', () => {
-    const p = {
-      id: 'p',
-      name: 'P',
-      templateId: null,
-      mesoWeeks: 6,
-      startedOn: '2026-09-07',
-      days: [day('lun', 0), day('mar', 1)],
-      archived: false,
-    }
-    expect(dayForDate(p, new Set(), new Date('2026-10-06T10:00:00'))?.id).toBe('mar') // Tuesday
-    expect(dayForDate(p, new Set(), new Date('2026-10-10T10:00:00'))).toBeNull() // Saturday
-  })
-  it('rotates floating days by what is already done this week', () => {
-    const p = {
-      id: 'p',
-      name: 'P',
-      templateId: null,
-      mesoWeeks: 6,
-      startedOn: '2026-09-07',
-      days: [day('a', null), day('b', null)],
-      archived: false,
-    }
-    expect(dayForDate(p, new Set(['a']))?.id).toBe('b')
+    expect(mesoWeek(program, new Date('2026-09-08T12:00:00'))).toMatchObject({
+      week: 1,
+      deload: false,
+    })
+    expect(mesoWeek(program, new Date('2026-09-30T12:00:00'))).toMatchObject({
+      week: 4,
+      deload: false,
+    })
+    expect(mesoWeek(program, new Date('2026-10-06T12:00:00'))).toMatchObject({
+      week: 5,
+      deload: true,
+    })
+    expect(mesoWeek(program, new Date('2026-10-13T12:00:00'))).toMatchObject({
+      week: 1,
+      deload: false,
+    })
+    // With the workouts: a deload nobody earned (no sessions in three weeks) is postponed.
+    expect(mesoWeek(program, new Date('2026-10-06T12:00:00'), [])).toMatchObject({
+      deload: false,
+      postponed: true,
+    })
   })
 })
 
