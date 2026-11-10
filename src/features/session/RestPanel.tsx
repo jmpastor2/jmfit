@@ -35,7 +35,7 @@ export function RestPanel({ sound }: { sound: boolean }) {
         <div
           className={clsx(
             'readout text-[44px] font-semibold leading-none',
-            over ? 'text-gold' : 'text-ink',
+            over ? 'rest-over text-gold' : 'text-ink',
           )}
           role="timer"
           aria-live="off"

@@ -41,7 +41,7 @@ export function Spark({
       <svg
         viewBox={`0 0 100 ${H}`}
         preserveAspectRatio="none"
-        className="absolute inset-0 size-full overflow-visible"
+        className="chart-reveal absolute inset-0 size-full overflow-visible"
       >
         {area && (
           <path

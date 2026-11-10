@@ -98,8 +98,16 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   encaja, y Programas recomienda por el ritmo real. Plantilla nueva `jm-full-arms-3` (cuerpo completo
   + brazos, 3 días sin día fijo). La descarga solo se aplica con 8 sesiones en las 3 semanas previas
   (`mesoWeek(…, workouts)` → `postponed`). `scripts/snapshot.mjs` usa `--read-only` (la CLI nueva lo
-  exige). Pendiente: `orbe_plan` (SQL) sigue con la lógica antigua de calendario; alinearlo es una
-  migración en producción.
+  exige).
+
+- 2026-11-10 (movimiento y Orbe): `orbe_plan` sigue la rotación de la app (migración
+  `20261110000000_orbe_plan_rotation.sql`, aplicada): fuera del calendario responde modo `rotation`,
+  con `next`, `last_done` y `pending_this_week` en orden desde el siguiente al último hecho.
+  Animaciones que no mueven la maquetación (solo opacidad, escala y recorte; respetan «reducir
+  movimiento»): la serie marcada destella en dorado y su check salta, con borde dorado si es récord
+  y vibración corta; el contenido de la tarjeta y cada pantalla entran con un fundido; barras que
+  se llenan y gráficas que se dibujan al aparecer; cifras del resumen que cuentan hasta su valor
+  (`kpi/CountUp`); el reloj del descanso late al llegar a cero.
 
 ## Pendiente
 

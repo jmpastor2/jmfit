@@ -190,6 +190,8 @@ function Session({ workout }: { workout: WorkoutFull }) {
     null,
   )
   const [finishing, setFinishing] = useState(false)
+  // The set just logged (and whether it broke a record): its row flashes once.
+  const [fresh, setFresh] = useState<{ id: string; pr: boolean } | null>(null)
 
   const prior = (exerciseId: string, excludeId: string) =>
     sets.filter((s) => s.exerciseId === exerciseId && s.id !== excludeId)
@@ -226,6 +228,8 @@ function Session({ workout }: { workout: WorkoutFull }) {
           )
         : undefined
     saveDraft(workout.id, null)
+    setFresh({ id: set.id, pr: prs.length > 0 })
+    navigator.vibrate?.(prs.length ? [15, 40, 30] : 12)
     if (partner) {
       restTimer.stop()
       setFocus(partner.index)
@@ -389,6 +393,7 @@ function Session({ workout }: { workout: WorkoutFull }) {
               key={`${b.index}-${b.exercise.id}`}
               block={b}
               workoutId={workout.id}
+              fresh={fresh}
               total={blocks.length}
               open={focus === b.index}
               onToggle={() => setFocus(focus === b.index ? null : b.index, b.index)}
@@ -542,6 +547,7 @@ interface SetValues {
 function ExerciseCard({
   block,
   workoutId,
+  fresh,
   total,
   open,
   onToggle,
@@ -559,6 +565,7 @@ function ExerciseCard({
 }: {
   block: ExerciseBlock
   workoutId: string
+  fresh: { id: string; pr: boolean } | null
   total: number
   open: boolean
   onToggle: () => void
@@ -632,7 +639,7 @@ function ExerciseCard({
       </button>
 
       {open && (
-        <div className="border-t border-line px-4 pb-4 pt-3">
+        <div className="page-in border-t border-line px-4 pb-4 pt-3">
           <div className="mb-3 flex items-center justify-between gap-2">
             <span className="spec">
               {block.index + 1} de {total}
@@ -705,6 +712,7 @@ function ExerciseCard({
                   row={row}
                   label={rowLabel(rows, i)}
                   timed={Boolean(exercise.timed)}
+                  flash={row.done?.id === fresh?.id ? (fresh?.pr ? 'pr' : 'set') : null}
                   onEdit={(set) => setEditing({ set, label: rowLabel(rows, i) })}
                 />
               ),
@@ -803,11 +811,14 @@ function SetLine({
   row,
   label,
   timed,
+  flash,
   onEdit,
 }: {
   row: RowState
   label: string
   timed: boolean
+  /** Just logged: the row flashes once (longer, with a gold edge, for a record). */
+  flash: 'set' | 'pr' | null
   onEdit: (set: LoggedSet) => void
 }) {
   const done = row.done
@@ -832,7 +843,12 @@ function SetLine({
   }
   // A logged set is a button: tap it to fix the weight, the reps or the RIR, or remove it.
   return (
-    <li className="border-b border-line last:border-0">
+    <li
+      className={clsx(
+        'border-b border-line last:border-0',
+        flash === 'pr' ? 'set-flash-pr' : flash && 'set-flash',
+      )}
+    >
       <button
         type="button"
         onClick={() => onEdit(done)}
@@ -857,7 +873,7 @@ function SetLine({
           <span className="text-[12.5px] text-muted">RIR {formatNumber(done.rir)}</span>
         )}
         <Pencil className="size-3.5 text-muted" aria-hidden />
-        <Check className="size-4 text-gold" strokeWidth={2.5} />
+        <Check className={clsx('size-4 text-gold', flash && 'pop')} strokeWidth={2.5} />
       </button>
     </li>
   )

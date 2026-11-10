@@ -49,7 +49,10 @@ export function AppShell() {
       <main
         className={immersive ? 'mx-auto w-full max-w-2xl' : 'mx-auto w-full max-w-2xl px-4 pb-36'}
       >
-        <Outlet />
+        {/* Keyed by screen: each one fades in as it arrives. */}
+        <div key={pathname} className="page-in">
+          <Outlet />
+        </div>
       </main>
       {!immersive && (
         <>

@@ -1,6 +1,7 @@
 import { Trophy } from 'lucide-react'
 import { useMemo } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { CountUp } from '@/components/kpi/CountUp'
 import { Delta, Kpi } from '@/components/kpi/Kpi'
 import { Meter } from '@/components/kpi/Meter'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -106,10 +107,15 @@ function Summary({ workout, workouts }: { workout: WorkoutFull; workouts: Workou
       />
 
       <section className="grid grid-cols-2 gap-x-4 gap-y-5 pb-6">
-        <Kpi label="Duración" value={minutes} unit="min" size="lg" />
-        <Kpi label="Series" value={data.totals.sets} size="lg" />
-        <Kpi label="Repeticiones" value={data.totals.reps} size="lg" />
-        <Kpi label="Tonelaje" value={formatInt(data.totals.tonnage)} unit="kg" size="lg" />
+        <Kpi label="Duración" value={<CountUp value={minutes} />} unit="min" size="lg" />
+        <Kpi label="Series" value={<CountUp value={data.totals.sets} />} size="lg" />
+        <Kpi label="Repeticiones" value={<CountUp value={data.totals.reps} />} size="lg" />
+        <Kpi
+          label="Tonelaje"
+          value={<CountUp value={Math.round(data.totals.tonnage)} format={formatInt} />}
+          unit="kg"
+          size="lg"
+        />
       </section>
 
       <section className="border-t border-line py-5">

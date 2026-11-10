@@ -57,7 +57,7 @@ export function Meter({
         )}
         <div
           data-fill
-          className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none"
+          className="meter-grow absolute inset-y-0 left-0 rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none"
           style={{ width: `${f * 100}%`, background: color }}
         />
       </div>
