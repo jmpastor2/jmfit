@@ -124,6 +124,14 @@ async function requireUser(req: Request): Promise<string> {
   if (!jwt) throw new HttpError(401, 'unauthorized')
   const { data, error } = await admin().auth.getUser(jwt)
   if (error || !data.user) throw new HttpError(401, 'unauthorized')
+  // This function uses the service role, which skips the `approved_only` policies: a signed-up
+  // account that was never approved must not get in through here.
+  const { data: access } = await admin()
+    .from('access')
+    .select('status')
+    .eq('user_id', data.user.id)
+    .maybeSingle()
+  if (access?.status !== 'approved') throw new HttpError(403, 'not_approved')
   return data.user.id
 }
 
