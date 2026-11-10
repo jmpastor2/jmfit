@@ -180,6 +180,22 @@ function Session({ workout }: { workout: WorkoutFull }) {
   // animation the first time, so coming back to the app lands straight on it.
   const activeRow = focus == null ? -1 : (blocks[focus]?.rows.findIndex((r) => !r.done) ?? -1)
   const activeKey = activeRow === -1 ? null : `${focus}:${activeRow}`
+  // Logging a set puts its row above the next one (and a work set is taller than a warm-up),
+  // which pushed «Serie hecha» down every time. The button stays where it was on screen, so a
+  // run of sets is logged without moving the thumb.
+  const hold = useRef<{ key: string | null; focus: number | null; top: number } | null>(null)
+  const holdActiveSet = () => {
+    const el = document.querySelector('[data-log-set]')
+    hold.current = el ? { key: activeKey, focus, top: el.getBoundingClientRect().top } : null
+  }
+  useLayoutEffect(() => {
+    const h = hold.current
+    if (!h || h.key === activeKey) return
+    hold.current = null
+    const el = h.focus === focus ? document.querySelector('[data-log-set]') : null
+    if (el) window.scrollBy(0, el.getBoundingClientRect().top - h.top)
+  })
+
   const revealed = useRef(false)
   useEffect(() => {
     if (activeKey == null) return
@@ -250,6 +266,7 @@ function Session({ workout }: { workout: WorkoutFull }) {
       if (next !== -1) setFocus(next)
     }
     if (prs.length) toast(prMessage(prs[0]!), 'success')
+    holdActiveSet()
     queued(saveSets([set]))
   }
 
@@ -1052,6 +1069,7 @@ function ActiveSet({
         block
         size="lg"
         className="mt-3"
+        data-log-set
         // A loaded exercise needs its weight; bodyweight (lastre 0) and held sets do not.
         disabled={r == null || (w == null && !exercise.bodyweight && !exercise.timed)}
         leading={<Check className="size-5" strokeWidth={2.6} />}

@@ -7,7 +7,7 @@ import { Meter } from '@/components/kpi/Meter'
 import { Ticks } from '@/components/kpi/Ticks'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/Button'
-import { Badge, Skeleton } from '@/components/ui/primitives'
+import { Badge, Chip, Skeleton } from '@/components/ui/primitives'
 import {
   useActiveProgram,
   useActiveWorkout,
@@ -23,6 +23,7 @@ import type { Exercise, ProgramDay, ReadinessLevel, Scan } from '@/domain/types'
 import { useExerciseLookup } from '@/features/exercise/lookup'
 import { mesoWeek, useStartWorkout } from '@/features/session/useStartWorkout'
 import { DayPickerSheet } from '@/features/train/DayPickerSheet'
+import { expressOptions, fitToMinutes } from '@/features/train/express'
 import { cadence, fitsCadence, nextProgramDay, realDaysPerWeek } from '@/features/train/rotation'
 import { PROGRAM_TEMPLATES } from '@/content/programs'
 import { recommendTemplate } from '@/features/programs/recommendTemplate'
@@ -144,6 +145,8 @@ function TodayWorkout({ program, now }: { program: Program | null; now: Date }) 
   const start = useStartWorkout()
   const lookup = useExerciseLookup()
   const [picking, setPicking] = useState(false)
+  // «Tengo 30 minutos»: the day cut down to that time (null = the whole day).
+  const [minutes, setMinutes] = useState<number | null>(null)
   const workouts = workoutsQ.data
 
   const next = useMemo(() => nextProgramDay(program, workouts ?? [], now), [program, workouts, now])
@@ -251,7 +254,9 @@ function TodayWorkout({ program, now }: { program: Program | null; now: Date }) 
   }
 
   const meso = mesoWeek(program, now, workouts)
-  const totalSets = day.slots.reduce((t, s) => t + s.sets, 0)
+  const express = expressOptions(day.slots, lookup)
+  const slots = minutes ? fitToMinutes(day.slots, minutes, lookup) : day.slots
+  const totalSets = slots.reduce((t, s) => t + s.sets, 0)
   return (
     <Hero
       label="Entreno de hoy"
@@ -266,9 +271,9 @@ function TodayWorkout({ program, now }: { program: Program | null; now: Date }) 
           {formatShortDate(next.last.workout.startedAt, now)}).
         </p>
       )}
-      {day.slots.length ? (
+      {slots.length ? (
         <ul className="mt-3 divide-y divide-line">
-          {day.slots.map((s) => (
+          {slots.map((s) => (
             <li key={s.id} className="flex min-h-10 items-center justify-between gap-3 py-1.5">
               <span className="min-w-0 break-words text-[14px]">{lookup(s.exerciseId).name}</span>
               <span className="readout shrink-0 text-[16px] font-semibold text-ink-2">
@@ -283,16 +288,29 @@ function TodayWorkout({ program, now }: { program: Program | null; now: Date }) 
         </p>
       )}
       <p className="mt-3 text-[12.5px] text-muted">
-        ≈ {estimateMinutes(day.slots)} min · {totalSets} series
+        ≈ {estimateMinutes(slots)} min · {totalSets} series
+        {minutes ? ` · versión corta de ${day.slots.length} ejercicios` : ''}
         {meso.deload ? ' · semana de descarga: menos series y más margen' : ''}
       </p>
+      {express.length > 0 && (
+        <div className="mt-2 flex items-center gap-1.5" role="group" aria-label="Tiempo disponible">
+          <Chip active={minutes === null} onClick={() => setMinutes(null)}>
+            Completa
+          </Chip>
+          {express.map((m) => (
+            <Chip key={m} active={minutes === m} onClick={() => setMinutes(m)}>
+              {m} min
+            </Chip>
+          ))}
+        </div>
+      )}
       <Button
         block
         size="lg"
         className="mt-4"
         leading={<Play className="size-5" />}
-        disabled={!day.slots.length}
-        onClick={() => startDay(day)}
+        disabled={!slots.length}
+        onClick={() => startDay({ ...day, slots })}
       >
         Empezar entreno
       </Button>

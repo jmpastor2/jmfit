@@ -109,6 +109,12 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   se llenan y gráficas que se dibujan al aparecer; cifras del resumen que cuentan hasta su valor
   (`kpi/CountUp`); el reloj del descanso late al llegar a cero.
 
+- 2026-11-10 (sesión exprés y botón fijo): en Hoy, «Completa / 45 min / 30 min» recorta el día al
+  tiempo que hay (`train/express.ts`: primero series de más, luego ejercicios cuyo músculo principal
+  ya trabaja otro, desde el final; nunca parte una superserie; los huecos conservan id y orden, así
+  que la sesión sigue contando como ese día). En la sesión, «Serie hecha» se queda en el mismo
+  sitio de la pantalla al registrar (`data-log-set`), para apuntar varias seguidas sin mover el dedo.
+
 ## Pendiente
 
 1. Publicar: GitHub → Settings → Pages → Source: **GitHub Actions** (una vez), y push a `main`.
