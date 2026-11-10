@@ -4,11 +4,11 @@ Forja lee los datos de la pulsera **Google Fitbit Air** a través de la **Google
 la sustituta de la Fitbit Web API (soporte terminado el 30-09-2026, apagado el 30-10-2026).
 Documentación oficial: <https://developers.google.com/health>.
 
-> **Aviso importante (verificado en la documentación el 07-10-2026):** Google indica en todas
-> las páginas de la API que *"no está incorporando proyectos nuevos por ahora"* y que ampliará
-> el acceso más adelante. Es posible que, aunque sigas los pasos, la API no se pueda habilitar
-> o que las llamadas fallen en un proyecto nuevo. Si te pasa, no es un fallo de Forja: hay que
-> esperar a que Google abra el acceso (o pedirlo en <https://developers.google.com/health/support>).
+> **Acceso abierto (comprobado el 11-11-2026):** el aviso de que Google no admitía proyectos
+> nuevos ya no está en <https://developers.google.com/health/setup>. Cualquier proyecto de Google
+> Cloud puede habilitar `health.googleapis.com`; sin verificación admite hasta 100 usuarios de
+> prueba. En modo «Prueba» el *refresh token* caduca a los 7 días (hay que reconectar cada
+> semana); publicando la app en «Producción» deja de caducar.
 
 ## Cómo funciona
 

@@ -121,6 +121,12 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   (`train/freshness.ts`; `useStartWorkout` admite `plan`). «N semanas seguidas entrenando» y un
   botón para bajar el objetivo semanal al ritmo real cuando sobra por más de una sesión.
 
+- 2026-11-11: activado en producción el programa «Cuerpo completo + brazos · 3 días» (a petición
+  del usuario; PPL + Brazos sigue en Programas para volver con «Activar»). Google Health API ya
+  admite proyectos nuevos: toca desplegar `google-health` siguiendo `docs/google-health.md`, paso
+  a paso con el usuario. Con la pulsera conectada, el fútbol y otras actividades llegan solos
+  (`health_workouts`), por eso no se ha hecho un registro manual de actividades.
+
 ## Pendiente
 
 1. Publicar: GitHub → Settings → Pages → Source: **GitHub Actions** (una vez), y push a `main`.
