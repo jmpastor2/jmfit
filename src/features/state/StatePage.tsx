@@ -1,14 +1,19 @@
 import { clsx } from 'clsx'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { LineChart } from '@/components/charts/LineChart'
 import { CountUp } from '@/components/kpi/CountUp'
 import { Kpi } from '@/components/kpi/Kpi'
 import { Meter } from '@/components/kpi/Meter'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { EmptyState } from '@/components/ui/primitives'
+import { Chip, EmptyState } from '@/components/ui/primitives'
 import { formatNumber, STRAIN_MAX, strainTarget } from '@/domain/training'
 import { BAND_COLOR, BAND_LABEL, BAND_TEXT, hm, lastNight, shortDay, stateAdvice } from './format'
+import { useHealthDays, useMe, useWorkouts } from '@/data/hooks'
+import { localDateKey, sleepNeedMin } from '@/domain/training'
+import { useOtherActivities } from '@/features/train/useActivities'
 import { RecoveryStrainChart } from './RecoveryStrainChart'
+import { bedtimeTonight, clockText, saveWakeAt, savedWakeAt, sleepHabits } from './sleep'
+import { weekReport, type WeekNumbers } from './week'
 import { recentMean, recoveryBand, type DayState } from './state'
 import { useDayStates } from './useDayStates'
 
@@ -43,6 +48,27 @@ function State({ states }: { states: DayState[] }) {
   const rhr7 = recentMean(before, (s) => s.restingHr, 7)
   const strain7 = recentMean(before, (s) => s.strain, 7, 1)
   const week = weekNumbers(states)
+  const me = useMe()
+  const workouts = useWorkouts().data
+  const sports = useOtherActivities()
+  const health = useHealthDays().data
+  const habits = sleepHabits(states)
+  const [wakeAt, setWakeAt] = useState(savedWakeAt)
+  const bed = bedtimeTonight(states, sleepNeedMin(today.strain), wakeAt)
+  const chooseWake = (m: number | null) => {
+    setWakeAt(m)
+    saveWakeAt(m)
+  }
+  const proteinTarget = me.targetProtein
+  const report = weekReport({
+    states,
+    gymDates: (workouts ?? [])
+      .filter((w) => w.endedAt)
+      .map((w) => localDateKey(new Date(w.startedAt))),
+    sportDates: sports.map((a) => localDateKey(new Date(a.startedAt))),
+    food: (health ?? []).map((d) => ({ date: d.date, kcal: d.kcalIn, protein: d.proteinG })),
+    proteinTarget,
+  })
   const hrvPoints = states.flatMap((s) => (s.hrv != null ? [{ x: s.date, y: s.hrv }] : []))
   const rhrPoints = states.flatMap((s) =>
     s.restingHr != null ? [{ x: s.date, y: s.restingHr }] : [],
@@ -95,6 +121,8 @@ function State({ states }: { states: DayState[] }) {
         </div>
         <p className="mt-4 text-[14.5px] leading-snug">{stateAdvice(today, target)}</p>
       </section>
+
+      {report && <WeekSection now={report.now} before={report.before} tips={report.tips} />}
 
       <Section
         title="Cuatro semanas"
@@ -258,6 +286,55 @@ function State({ states }: { states: DayState[] }) {
         ) : (
           <p className="mb-3 text-[13px] text-muted">Aún no hay noches registradas.</p>
         )}
+        {bed && (
+          <div className="mb-4 rounded-[8px] border border-gold/40 bg-signal-soft p-3">
+            <span className="spec block text-gold">Esta noche</span>
+            <span className="readout mt-1 block text-[32px] font-semibold leading-none">
+              {clockText(bed.bed)}
+            </span>
+            <span className="mt-1.5 block text-[13px] leading-snug text-ink-2">
+              A la cama para dormir {hm(bed.needMin)} h y levantarte a las {clockText(bed.wake)}
+              {wakeAt == null ? ' (tu hora habitual)' : ''}
+              {bed.debtMin > 0 ? `, recuperando parte de las ${hm(bed.debtMin)} h que debes` : ''}.
+            </span>
+            <div
+              className="mt-3 flex flex-wrap items-center gap-1.5"
+              role="group"
+              aria-label="Mañana me levanto a las"
+            >
+              <span className="mr-1 text-[12px] text-muted">Me levanto a las</span>
+              <Chip active={wakeAt == null} onClick={() => chooseWake(null)}>
+                {habits ? `Habitual ${clockText(habits.wake)}` : 'Habitual'}
+              </Chip>
+              {[6, 7, 8, 9].map((h) => (
+                <Chip key={h} active={wakeAt === h * 60} onClick={() => chooseWake(h * 60)}>
+                  {h}:00
+                </Chip>
+              ))}
+            </div>
+          </div>
+        )}
+        {habits && (
+          <div className="mb-4 grid grid-cols-2 gap-4">
+            <Kpi
+              size="sm"
+              label="Regularidad"
+              value={
+                <span className={habits.consistency < 50 ? 'text-warn' : undefined}>
+                  {habits.consistency}
+                </span>
+              }
+              unit="%"
+              caption={`Horario ±${hm(habits.spreadMin)} h de una noche a otra`}
+            />
+            <Kpi
+              size="sm"
+              label="Horario habitual"
+              value={`${clockText(habits.bed)}–${clockText(habits.wake)}`}
+              caption={`${habits.nights} noches completas`}
+            />
+          </div>
+        )}
         <Bars
           states={last14}
           value={(s) => s.sleepMin}
@@ -411,4 +488,75 @@ function Stages({ deep, rem, total }: { deep: number; rem: number; total: number
       </p>
     </div>
   )
+}
+
+/** Last seven days against the seven before, and what would help most. */
+function WeekSection({
+  now,
+  before,
+  tips,
+}: {
+  now: WeekNumbers
+  before: WeekNumbers | null
+  tips: string[]
+}) {
+  const rows: { label: string; now: string; before: string | null; better: boolean | null }[] = [
+    row('Recuperación', now.recovery, before?.recovery, (v) => `${v} %`, true),
+    row('Carga media', now.strain, before?.strain, (v) => formatNumber(v, 1), null),
+    row('Sueño (noches completas)', now.sleep, before?.sleep, (v) => `${hm(v)} h`, true),
+    row('Regularidad del sueño', now.consistency, before?.consistency, (v) => `${v} %`, true),
+    row('Pasos al día', now.steps, before?.steps, (v) => formatNumber(v), true),
+    row('Sesiones de fuerza', now.gym, before?.gym, String, true),
+    row('Deporte (pulsera)', now.sports, before?.sports, String, null),
+    row('Proteína al día', now.protein, before?.protein, (v) => `${v} g`, true),
+  ].filter((r) => r.now !== '—' || r.before != null)
+  return (
+    <Section title="Tu semana" caption="Los últimos 7 días frente a los 7 anteriores.">
+      <ul className="divide-y divide-line">
+        {rows.map((r) => (
+          <li key={r.label} className="flex min-h-10 items-center justify-between gap-3 py-1.5">
+            <span className="text-[13.5px]">{r.label}</span>
+            <span className="flex items-baseline gap-2">
+              {r.before != null && <span className="text-[12px] text-muted">{r.before} →</span>}
+              <span
+                className={clsx(
+                  'readout text-[16px] font-semibold',
+                  r.better === true ? 'text-gold' : r.better === false ? 'text-warn' : 'text-ink',
+                )}
+              >
+                {r.now}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {tips.length > 0 && (
+        <ol className="mt-4 flex flex-col gap-2">
+          {tips.map((t, i) => (
+            <li key={t} className="flex gap-3 text-[14px] leading-snug">
+              <span className="readout w-4 shrink-0 text-[17px] text-gold">{i + 1}</span>
+              <span>{t}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </Section>
+  )
+}
+
+/** A report row: the figure now, the one before, and whether it moved the good way. */
+function row(
+  label: string,
+  now: number | null,
+  before: number | null | undefined,
+  fmt: (v: number) => string,
+  higherIsBetter: boolean | null,
+) {
+  const moved = now != null && before != null && now !== before
+  return {
+    label,
+    now: now == null ? '—' : fmt(now),
+    before: before == null ? null : fmt(before),
+    better: !moved || higherIsBetter == null ? null : now! > before! === higherIsBetter,
+  }
 }

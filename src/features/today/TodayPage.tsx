@@ -168,7 +168,11 @@ function TodayWorkout({ program, now }: { program: Program | null; now: Date }) 
   const lookup = useExerciseLookup()
   const [picking, setPicking] = useState(false)
   // «Tengo 30 minutos»: the day cut down to that time (null = the whole day).
-  const [minutes, setMinutes] = useState<number | null>(null)
+  // A low recovery opens the day in its short version: still training, with less to recover from.
+  const readiness = useReadiness()
+  const [minutes, setMinutes] = useState<number | null>(() =>
+    readiness.level === 'easy' ? 30 : null,
+  )
   const workouts = workoutsQ.data
 
   const next = useMemo(() => nextProgramDay(program, workouts ?? [], now), [program, workouts, now])
@@ -314,6 +318,11 @@ function TodayWorkout({ program, now }: { program: Program | null; now: Date }) 
         {minutes ? ` · versión corta de ${day.slots.length} ejercicios` : ''}
         {meso.deload ? ' · semana de descarga: menos series y más margen' : ''}
       </p>
+      {readiness.level === 'easy' && minutes != null && (
+        <p className="mt-2 border-l-2 border-warn pl-3 text-[13px] leading-snug">
+          Recuperación baja: te propongo la versión corta. Si te encuentras bien, elige «Completa».
+        </p>
+      )}
       {express.length > 0 && (
         <div className="mt-2 flex items-center gap-1.5" role="group" aria-label="Tiempo disponible">
           <Chip active={minutes === null} onClick={() => setMinutes(null)}>

@@ -143,6 +143,14 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   objetivo según la recuperación, y sueño frente a lo necesario (7:30 h + hasta 1 h tras un día
   duro). Gráfica de cuatro semanas carga/recuperación, VFC y pulso en reposo, fases del sueño.
 
+- 2026-11-12 (Estado completo): la recuperación de Estado es la «preparación» de toda la app
+  (`useReadiness`: alta → apretar, media → normal, baja → suave; con recuperación baja Hoy abre la
+  versión de 30 min). Sueño: hora de acostarse esta noche (necesidad tras la carga del día + la mitad
+  de la deuda de las 3 últimas noches, hasta 1 h; despertar habitual o elegido, guardado en el
+  dispositivo), regularidad 0–100 % y horario habitual de las noches completas (`state/sleep.ts`;
+  inicio y fin de la noche desde `raw.sleep`). «Tu semana»: 7 días frente a los 7 anteriores y hasta
+  3 consejos (`state/week.ts`). En Hoy, por la tarde, la hora de acostarse.
+
 ## Pendiente
 
 1. Publicar: GitHub → Settings → Pages → Source: **GitHub Actions** (una vez), y push a `main`.

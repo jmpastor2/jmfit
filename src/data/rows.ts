@@ -422,7 +422,17 @@ export const toHealthDay = (r: Record<string, unknown>): HealthDay => ({
   proteinG: num(r.protein_g),
   carbsG: num(r.carbs_g),
   fatG: num(r.fat_g),
+  ...sleepWindow(r.raw),
 })
+
+/** Start and end of the night from the sync's raw record (`raw.sleep`). */
+function sleepWindow(raw: unknown): { sleepStart: string | null; sleepEnd: string | null } {
+  const sleep = (raw as { sleep?: { start?: unknown; end?: unknown } } | null)?.sleep
+  return {
+    sleepStart: typeof sleep?.start === 'string' ? sleep.start : null,
+    sleepEnd: typeof sleep?.end === 'string' ? sleep.end : null,
+  }
+}
 
 export const toHealthWorkout = (r: Record<string, unknown>): HealthWorkout => ({
   id: String(r.id),

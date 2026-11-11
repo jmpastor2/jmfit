@@ -1,6 +1,8 @@
 import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { formatNumber, STRAIN_MAX, strainTarget } from '@/domain/training'
+import { formatNumber, sleepNeedMin, STRAIN_MAX, strainTarget } from '@/domain/training'
+import { useNow } from '@/lib/useNow'
+import { bedtimeTonight, clockText, savedWakeAt } from './sleep'
 import { BAND_TEXT, lastNight, stateAdvice } from './format'
 import { recoveryBand, type DayState } from './state'
 
@@ -10,6 +12,9 @@ export function StateStrip({ states }: { states: DayState[] }) {
   const night = lastNight(states)
   const band = recoveryBand(today.recovery)
   const target = strainTarget(today.recovery)
+  // From the afternoon on, the next thing that matters is tonight's bedtime.
+  const evening = useNow().getHours() >= 17
+  const bed = evening ? bedtimeTonight(states, sleepNeedMin(today.strain), savedWakeAt()) : null
   return (
     <Link to="/estado" className="mb-5 block border-y border-line py-4 active:bg-panel-2">
       <div className="mb-3 flex items-center justify-between">
@@ -38,6 +43,12 @@ export function StateStrip({ states }: { states: DayState[] }) {
         />
       </div>
       <p className="mt-3 text-[13px] leading-snug text-ink-2">{stateAdvice(today, target)}</p>
+      {bed && (
+        <p className="mt-2 text-[13px] text-ink-2">
+          Esta noche, a la cama a las{' '}
+          <span className="readout text-[17px] font-semibold text-gold">{clockText(bed.bed)}</span>
+        </p>
+      )}
     </Link>
   )
 }

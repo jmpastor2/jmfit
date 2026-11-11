@@ -4,6 +4,7 @@ import { checkinAsHealthDay } from '@/data/rows'
 import { computeReadiness, localDateKey } from '@/domain/training'
 import type { HealthDay, Readiness } from '@/domain/types'
 import { useNow } from '@/lib/useNow'
+import { useDayStates } from '@/features/state/useDayStates'
 
 /**
  * Days of recovery data: the wearable's when synced, otherwise what was typed in the morning
@@ -32,16 +33,31 @@ function mergeDays(synced: HealthDay, typed: HealthDay): HealthDay {
   return out
 }
 
-/** Today's readiness from the wearable and/or the morning check-in. */
+/**
+ * Today's readiness, one number for the whole app. With the band, it is the recovery of
+ * «Estado» (and its bands decide whether the session pushes, holds or eases); without it, the
+ * wearable-less score from the morning check-in.
+ */
 export function useReadiness(): Readiness & { hasCheckin: boolean } {
   const days = useRecoveryDays()
+  const states = useDayStates(28)
   const checkins = useCheckins().data
   const now = useNow()
   const today = localDateKey(now)
   return useMemo(() => {
-    const todayDay = days.find((d) => d.date === today) ?? null
     const checkin = checkins?.find((c) => c.date === today) ?? null
+    const band = states?.at(-1)
+    if (band?.date === today && band.recovery != null) {
+      const level = band.recovery >= 67 ? 'push' : band.recovery >= 34 ? 'normal' : 'easy'
+      return {
+        score: band.recovery,
+        level,
+        factors: band.recoveryFactors,
+        hasCheckin: Boolean(checkin),
+      }
+    }
+    const todayDay = days.find((d) => d.date === today) ?? null
     const r = computeReadiness({ today: todayDay, baseline: days, checkin })
     return { ...r, hasCheckin: Boolean(checkin) }
-  }, [days, checkins, today])
+  }, [days, states, checkins, today])
 }

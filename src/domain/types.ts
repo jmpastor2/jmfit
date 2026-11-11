@@ -255,6 +255,9 @@ export interface HealthDay {
   proteinG: number | null
   carbsG: number | null
   fatG: number | null
+  /** When the main sleep of the night started and ended (instants), when the band knows. */
+  sleepStart?: string | null
+  sleepEnd?: string | null
 }
 
 export interface Checkin {

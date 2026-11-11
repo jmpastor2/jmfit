@@ -29,6 +29,9 @@ export interface DayState {
   sleepScore: number | null
   /** Few hours recorded: the band was probably off part of the night. */
   partialNight: boolean
+  /** When the night started and ended (instants), when the band knows. */
+  sleepStart: string | null
+  sleepEnd: string | null
   deepMin: number | null
   remMin: number | null
   hrv: number | null
@@ -138,6 +141,8 @@ export function dailyState(input: {
       sleepNeedMin: need,
       sleepScore: sleepPerformance(sleepMin, need),
       partialNight: sleepMin != null && sleepMin < PARTIAL_NIGHT_MIN,
+      sleepStart: day?.sleepStart ?? null,
+      sleepEnd: day?.sleepEnd ?? null,
       deepMin: day?.deepMin ?? null,
       remMin: day?.remMin ?? null,
       hrv: day?.hrvMs ?? null,
