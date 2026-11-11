@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forja · Privacidad</title>
+    <meta name="description" content="Política de privacidad de Forja, app personal de entrenamiento." />
+    <style>
+      :root {
+        color-scheme: dark;
+        --canvas: #0a0a0a;
+        --ink: #f3f0e8;
+        --muted: #8f8a80;
+        --gold: #c9a55c;
+        --line: #26241f;
+      }
+      body {
+        margin: 0;
+        background: var(--canvas);
+        color: var(--ink);
+        font: 16px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif;
+      }
+      main {
+        max-width: 680px;
+        margin: 0 auto;
+        padding: 40px 16px 64px;
+      }
+      h1 {
+        font-size: 30px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        margin: 0 0 4px;
+      }
+      h2 {
+        font-size: 15px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--gold);
+        margin: 32px 0 8px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+      }
+      p,
+      li {
+        color: var(--ink);
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      a {
+        color: var(--gold);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Forja</h1>
+      <p class="muted">Política de privacidad · última actualización: 11 de noviembre de 2026</p>
+
+      <p>
+        Forja es una aplicación personal de entrenamiento (registro de sesiones, progresión y
+        composición corporal) para uso privado de su autor y de las personas a las que él da
+        acceso. No es un servicio comercial, no tiene publicidad y no vende ni cede datos a nadie.
+      </p>
+
+      <h2>Qué datos usa</h2>
+      <ul>
+        <li>Los que escribes en la app: sesiones, series, objetivos, escáneres y check-ins.</li>
+        <li>
+          Si conectas Google Health, y solo con tu permiso: sueño, frecuencia cardiaca en reposo y
+          variabilidad, pasos, calorías activas, peso, % de grasa, sesiones de ejercicio y la
+          comida que registres (energía y macronutrientes). Forja solo pide permisos de lectura y
+          nunca escribe en tu cuenta de Google.
+        </li>
+      </ul>
+
+      <h2>Para qué se usan</h2>
+      <p>
+        Únicamente para mostrártelos en la app y calcular recomendaciones de entrenamiento
+        (preparación del día, carga por músculo, progresión, comida frente a tus objetivos). Si el
+        titular de la cuenta lo ha configurado, un resumen diario de esos datos se copia a su otra
+        app personal, Titra, en su propia base de datos. Los datos de Google Health no se usan para
+        publicidad ni para entrenar modelos de inteligencia artificial, y no se transfieren a
+        terceros, conforme a la
+        <a href="https://developers.google.com/terms/api-services-user-data-policy"
+          >Política de datos de usuario de los servicios de API de Google</a
+        >, incluidos sus requisitos de uso limitado.
+      </p>
+
+      <h2>Dónde se guardan</h2>
+      <p>
+        En una base de datos privada (Supabase, Unión Europea) protegida por inicio de sesión: cada
+        cuenta solo puede leer sus propios datos. Los permisos de Google solo los guarda y usa el
+        servidor para sincronizar; el navegador nunca los ve.
+      </p>
+
+      <h2>Cómo borrarlos</h2>
+      <p>
+        En Forja, Más → Pulsera y salud → Desconectar retira el permiso de Google y deja de
+        sincronizar. También puedes revocarlo en
+        <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.
+        Para borrar todos tus datos de Forja, escribe al titular de la app.
+      </p>
+
+      <h2>Contacto</h2>
+      <p>
+        Titular: <a href="https://github.com/jmpastor2">github.com/jmpastor2</a>
+      </p>
+
+      <p class="muted"><a href="./">Volver a Forja</a></p>
+    </main>
+  </body>
+</html>
