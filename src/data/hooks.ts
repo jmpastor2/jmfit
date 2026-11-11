@@ -23,6 +23,7 @@ import {
   toCheckin,
   toGoal,
   toHealthDay,
+  toHealthWorkout,
   toMachine,
   toProfile,
   toProgram,
@@ -612,6 +613,30 @@ export function useHealthDays() {
         throw error
       }
       return (data as Record<string, unknown>[]).map(toHealthDay)
+    },
+  })
+}
+
+/**
+ * Sessions the band recorded (football, swims, walks…) over the last four months. Read only:
+ * the `google-health` function writes them.
+ */
+export function useHealthWorkouts() {
+  const uid = useUid()
+  return useQuery({
+    queryKey: ['healthWorkouts', uid],
+    queryFn: async () => {
+      const since = new Date(Date.now() - 120 * 86_400_000).toISOString()
+      const { data, error } = await requireSupabase()
+        .from('health_workouts')
+        .select('id,activity,display_name,started_at,duration_s,avg_hr,kcal,distance_m')
+        .gte('started_at', since)
+        .order('started_at', { ascending: false })
+      if (error) {
+        if (isMissingTable(error)) return []
+        throw error
+      }
+      return (data as Record<string, unknown>[]).map(toHealthWorkout)
     },
   })
 }

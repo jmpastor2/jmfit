@@ -34,6 +34,15 @@ export interface Freshness {
   group: MuscleGroup
   /** Whole local days since the last effective set with the group as main muscle; null = never. */
   days: number | null
+  /** The most recent load was a sport the band recorded (e.g. «Fútbol»), not a Forja set. */
+  via?: string
+}
+
+/** A sport that tired some muscles (see `activities.ts`). */
+export interface ActivityLoad {
+  muscles: readonly Muscle[]
+  at: string
+  name: string
 }
 
 type Lookup = (id: string) => Pick<Exercise, 'primary'>
@@ -45,18 +54,27 @@ export function muscleFreshness(
   sets: readonly LoggedSet[],
   lookup: Lookup,
   now: Date,
+  activities: readonly ActivityLoad[] = [],
 ): Freshness[] {
-  const last = new Map<Muscle, string>()
+  const last = new Map<Muscle, { at: string; via?: string }>()
+  const seen = (m: Muscle, at: string, via?: string) => {
+    if ((last.get(m)?.at ?? '') < at) last.set(m, via ? { at, via } : { at })
+  }
   for (const s of sets) {
     if (!isEffectiveSet(s)) continue
-    for (const m of lookup(s.exerciseId).primary) {
-      if ((last.get(m) ?? '') < s.doneAt) last.set(m, s.doneAt)
-    }
+    for (const m of lookup(s.exerciseId).primary) seen(m, s.doneAt)
   }
+  for (const a of activities) for (const m of a.muscles) seen(m, a.at, a.name)
   const today = dayNumber(now)
   return FRESHNESS_GROUPS.map((group) => {
-    const latest = group.muscles.map((m) => last.get(m) ?? '').reduce((a, b) => (a > b ? a : b))
-    return { group, days: latest ? Math.max(0, today - dayNumber(new Date(latest))) : null }
+    let latest: { at: string; via?: string } | undefined
+    for (const m of group.muscles) {
+      const x = last.get(m)
+      if (x && (!latest || x.at > latest.at)) latest = x
+    }
+    if (!latest) return { group, days: null }
+    const days = Math.max(0, today - dayNumber(new Date(latest.at)))
+    return latest.via ? { group, days, via: latest.via } : { group, days }
   })
 }
 
@@ -80,6 +98,7 @@ export function tailoredSession(
   lookup: (id: string) => Exercise,
   now: Date,
   count = 5,
+  activities: readonly ActivityLoad[] = [],
 ): { slots: Slot[]; groups: MuscleGroup[] } {
   const days = new Map<string, Set<string>>()
   for (const s of sets) {
@@ -94,7 +113,7 @@ export function tailoredSession(
 
   const picked: Exercise[] = []
   const groups: MuscleGroup[] = []
-  for (const { group } of stalest(muscleFreshness(sets, lookup, now), count)) {
+  for (const { group } of stalest(muscleFreshness(sets, lookup, now, activities), count)) {
     const exercise = favourites.find(
       (e) => group.muscles.includes(e.primary[0]!) && !picked.includes(e),
     )

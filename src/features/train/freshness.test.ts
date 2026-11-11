@@ -80,3 +80,28 @@ describe('weekStreak', () => {
     expect(weekStreak([{ startedAt: '2026-11-09T19:00:00', endedAt: null }], now)).toBe(0)
   })
 })
+
+describe('sports recorded by the band', () => {
+  it('count as recent load: no legs the day after football', () => {
+    const sets = [
+      set('squat', '2026-10-15T20:00:00'),
+      set('bench-press', '2026-11-01T20:00:00'),
+      set('lat-pulldown', '2026-11-02T20:00:00'),
+      set('barbell-curl', '2026-11-03T20:00:00'),
+    ]
+    const football = {
+      muscles: ['quads', 'hamstrings', 'glutes', 'calves'] as const,
+      at: '2026-11-10T20:00:00',
+      name: 'Fútbol',
+    }
+    const fresh = muscleFreshness(sets, lookup, now, [football])
+    expect(fresh.find((f) => f.group.id === 'quads')).toMatchObject({ days: 1, via: 'Fútbol' })
+    expect(fresh.find((f) => f.group.id === 'chest')).toEqual({
+      group: expect.objectContaining({ id: 'chest' }),
+      days: 10,
+    })
+    const { groups } = tailoredSession(sets, lookup, now, 5, [football])
+    expect(groups.map((g) => g.id)).not.toContain('quads')
+    expect(groups[0]!.id).toBe('chest')
+  })
+})

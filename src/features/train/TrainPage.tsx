@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/Button'
 import { Badge, SectionTitle, Skeleton } from '@/components/ui/primitives'
 import { useActiveProgram, useScans, useSets, useWorkouts } from '@/data/hooks'
 import type { Program, WorkoutFull } from '@/data/rows'
-import { tonnage } from '@/domain/training'
+import { formatNumber, tonnage } from '@/domain/training'
 import type { Exercise } from '@/domain/types'
 import { useExerciseLookup } from '@/features/exercise/lookup'
 import { mesoWeek, useStartWorkout } from '@/features/session/useStartWorkout'
 import { useNow } from '@/lib/useNow'
+import { activityName } from './activities'
 import { dayKeyOf, lastSameDay } from './dayMatch'
+import { useOtherActivities } from './useActivities'
 import { nextProgramDay } from './rotation'
 import {
   estimateMinutes,
@@ -71,8 +73,51 @@ export function TrainPage() {
         </Button>
       </div>
 
+      <BandActivities />
       <History />
     </>
+  )
+}
+
+/* ───────────── Band activities ───────────── */
+
+/** Sport the band recorded outside Forja (football, swims…): last four weeks. */
+function BandActivities() {
+  const acts = useOtherActivities()
+  const [now] = useState(() => Date.now())
+  const month = acts.filter((a) => now - Date.parse(a.startedAt) < 28 * 86_400_000)
+  const recent = month.slice(0, 6)
+  if (!recent.length) return null
+  return (
+    <section className="mb-6">
+      <SectionTitle>Otras actividades · pulsera</SectionTitle>
+      <ul className="divide-y divide-line border-y border-line">
+        {recent.map((a) => (
+          <li key={a.id} className="flex min-h-[52px] items-center gap-3 py-2">
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-medium">{activityName(a)}</span>
+              <span className="block text-[12.5px] text-muted">
+                {formatShortDate(a.startedAt)}
+                {a.avgHr ? ` · ${a.avgHr} ppm de media` : ''}
+                {a.distanceM ? ` · ${formatNumber(a.distanceM / 1000, 1)} km` : ''}
+              </span>
+            </span>
+            <span className="flex shrink-0 flex-col items-end">
+              <span className="readout text-[18px] font-semibold">
+                {a.durationS ? Math.round(a.durationS / 60) : '—'}
+                <span className="ml-0.5 font-sans text-[11px] text-muted">min</span>
+              </span>
+              {a.kcal ? <span className="text-[12px] text-muted">{a.kcal} kcal</span> : null}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {month.length > recent.length && (
+        <p className="mt-2 px-1 text-[12px] text-muted">
+          {month.length} en las últimas cuatro semanas; aquí las {recent.length} más recientes.
+        </p>
+      )}
+    </section>
   )
 }
 

@@ -24,6 +24,7 @@ const TABLES = {
   custom_exercises: `user_id = '${owner}'`,
   health_daily: `user_id = '${owner}'`,
   health_connections: `user_id = '${owner}'`,
+  health_workouts: `user_id = '${owner}'`,
 }
 
 const out = { owner }

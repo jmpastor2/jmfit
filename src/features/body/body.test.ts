@@ -140,6 +140,10 @@ const day = (date: string, patch: Partial<HealthDay>): HealthDay => ({
   vo2max: null,
   weight: null,
   bodyFat: null,
+  kcalIn: null,
+  proteinG: null,
+  carbsG: null,
+  fatG: null,
   ...patch,
 })
 

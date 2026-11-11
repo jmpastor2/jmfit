@@ -12,6 +12,7 @@ import {
   useActiveProgram,
   useActiveWorkout,
   useGoals,
+  useHealthConnection,
   queued,
   useMe,
   useScans,
@@ -20,12 +21,14 @@ import {
   useWorkouts,
 } from '@/data/hooks'
 import type { Program, WorkoutFull } from '@/data/rows'
-import { formatNumber, goalProgress } from '@/domain/training'
+import { formatNumber, goalProgress, startOfLocalWeek } from '@/domain/training'
 import type { Exercise, ProgramDay, ReadinessLevel, Scan } from '@/domain/types'
 import { useExerciseLookup } from '@/features/exercise/lookup'
 import { mesoWeek, useStartWorkout } from '@/features/session/useStartWorkout'
 import { DayPickerSheet } from '@/features/train/DayPickerSheet'
+import { activityLoads, activityName } from '@/features/train/activities'
 import { expressOptions, fitToMinutes } from '@/features/train/express'
+import { useOtherActivities } from '@/features/train/useActivities'
 import {
   STALE_DAYS,
   muscleFreshness,
@@ -49,6 +52,7 @@ import {
 import { useNow } from '@/lib/useNow'
 import { dailyWeights, weightEntries, weightSourceLabel } from '@/features/body/weight'
 import { CheckinSheet } from './CheckinSheet'
+import { FoodBlock } from './FoodBlock'
 import {
   SCAN_STALE_DAYS,
   agoLabel,
@@ -71,6 +75,7 @@ export function TodayPage() {
   const workouts = useWorkouts().data
   const meso = program ? mesoWeek(program, now, workouts) : null
   const name = me.displayName.trim()
+  const latestWeight = useLatestWeight()
 
   return (
     <>
@@ -85,7 +90,9 @@ export function TodayPage() {
         }
       />
       <TodayWorkout program={program} now={now} />
+      <BandAlert />
       <ReadinessBlock />
+      <FoodBlock now={now} bodyweight={latestWeight?.value ?? null} />
       <WeekBlock now={now} weeklyTarget={me.weeklyTarget} program={program} />
       <MusclesBlock now={now} />
       <RecordsBlock now={now} />
@@ -388,6 +395,32 @@ function HeroTitle({ children }: { children: ReactNode }) {
   )
 }
 
+/* ───────────── Pulsera ───────────── */
+
+/**
+ * The band stopped syncing (Google's permission ran out or was withdrawn): say so where it is
+ * seen every day, not only in Ajustes.
+ */
+function BandAlert() {
+  const conn = useHealthConnection().data
+  if (!conn || conn.status === 'connected') return null
+  return (
+    <Link
+      to="/settings/health"
+      className="mb-4 flex min-h-11 items-center justify-between gap-3 border-l-2 border-warn pl-3 text-[13.5px]"
+    >
+      <span>
+        {conn.status === 'reauth_required'
+          ? 'La pulsera dejó de sincronizar: Google pide volver a conectarla.'
+          : 'La pulsera no pudo sincronizar.'}
+      </span>
+      <span className="spec flex shrink-0 items-center text-gold">
+        Reconectar <ChevronRight className="size-3.5" aria-hidden />
+      </span>
+    </Link>
+  )
+}
+
 /* ───────────── Preparación ───────────── */
 
 const LEVEL_TEXT: Record<ReadinessLevel, string> = {
@@ -489,7 +522,24 @@ function WeekBlock({
         : null,
     [pace, me.trainingGoal, me.experience],
   )
-  const streak = useMemo(() => weekStreak(workouts ?? [], now), [workouts, now])
+  const acts = useOtherActivities()
+  // This week's sports from the band: they fill the day in the ticks and keep the streak.
+  const weekActs = useMemo(() => {
+    const from = startOfLocalWeek(now).getTime()
+    return acts.filter((a) => Date.parse(a.startedAt) >= from)
+  }, [acts, now])
+  const actDays = new Set(weekActs.map((a) => (new Date(a.startedAt).getDay() + 6) % 7))
+  const streak = useMemo(
+    () =>
+      weekStreak(
+        [
+          ...(workouts ?? []),
+          ...acts.map((a) => ({ startedAt: a.startedAt, endedAt: a.startedAt })),
+        ],
+        now,
+      ),
+    [workouts, acts, now],
+  )
   const updateProfile = useUpdateProfile()
   // A target far above the real pace reads «1 de 5» every week: offer the one that fits.
   const realTarget = pace ? realDaysPerWeek(pace.perWeek) : null
@@ -516,16 +566,10 @@ function WeekBlock({
         }
       >
         <Ticks
-          cells={w.days.map((d) => (d ? 'full' : 'none'))}
+          cells={w.days.map((d, i) => (d ? 'full' : actDays.has(i) ? 'partial' : 'none'))}
           todayIndex={w.todayIndex}
           label={`${w.sessions} sesiones esta semana`}
         />
-        {streak >= 2 && (
-          <p className="mb-2 text-[12.5px] text-ink-2">
-            <span className="readout text-[15px] font-semibold text-gold">{streak}</span> semanas
-            seguidas entrenando.
-          </p>
-        )}
         <div className="mt-1 flex gap-[3px]" aria-hidden>
           {WEEK_LETTERS.map((l, i) => (
             <span
@@ -539,6 +583,23 @@ function WeekBlock({
             </span>
           ))}
         </div>
+        {weekActs.length > 0 && (
+          <p className="mt-2 text-[12.5px] text-ink-2">
+            Además:{' '}
+            {weekActs
+              .map(
+                (a) =>
+                  `${activityName(a)}${a.durationS ? ` ${Math.round(a.durationS / 60)} min` : ''}`,
+              )
+              .join(' · ')}
+          </p>
+        )}
+        {streak >= 2 && (
+          <p className="mt-2 text-[12.5px] text-ink-2">
+            <span className="readout text-[15px] font-semibold text-gold">{streak}</span> semanas
+            seguidas entrenando.
+          </p>
+        )}
       </Kpi>
       {program && pace && better && better.id !== program.templateId && (
         <div className="mt-4 border-l-2 border-warn pl-3 text-[13.5px] leading-snug">
@@ -616,21 +677,33 @@ function MusclesBlock({ now }: { now: Date }) {
   const active = useActiveWorkout()
   const lookup = useExerciseLookup()
   const start = useStartWorkout()
-  const fresh = useMemo(() => muscleFreshness(sets ?? [], lookup, now), [sets, lookup, now])
-  const tailored = useMemo(() => tailoredSession(sets ?? [], lookup, now), [sets, lookup, now])
+  // Football and other sports the band recorded tire muscles too: no legs the day after a match.
+  const acts = useOtherActivities()
+  const loads = useMemo(() => activityLoads(acts), [acts])
+  const fresh = useMemo(
+    () => muscleFreshness(sets ?? [], lookup, now, loads),
+    [sets, lookup, now, loads],
+  )
+  const tailored = useMemo(
+    () => tailoredSession(sets ?? [], lookup, now, 5, loads),
+    [sets, lookup, now, loads],
+  )
   if (!fresh.some((f) => f.days != null)) return null
   return (
     <Block title="Hace cuánto entrenas cada músculo">
       <ul className="grid grid-cols-2 gap-x-6">
-        {fresh.map(({ group, days }) => (
+        {fresh.map(({ group, days, via }) => (
           <li
             key={group.id}
             className="flex min-h-10 items-baseline justify-between gap-2 border-b border-line py-2"
           >
-            <span className="text-[14px]">{group.label}</span>
+            <span className="min-w-0 text-[14px]">
+              {group.label}
+              {via && <span className="block text-[11.5px] leading-tight text-muted">{via}</span>}
+            </span>
             <span
               className={clsx(
-                'readout text-[17px] font-semibold',
+                'readout shrink-0 text-[17px] font-semibold',
                 days == null ? 'text-muted' : days >= STALE_DAYS ? 'text-warn' : 'text-ink',
               )}
             >
@@ -641,7 +714,8 @@ function MusclesBlock({ now }: { now: Date }) {
         ))}
       </ul>
       <p className="mt-2 text-[12px] text-muted">
-        Días desde la última serie efectiva como músculo principal. En naranja, {STALE_DAYS} o más.
+        Días desde la última serie efectiva como músculo principal, o desde un deporte que lo cansa
+        (fútbol, natación…). En naranja, {STALE_DAYS} o más.
       </p>
       {!active && tailored.slots.length >= 3 && (
         <Button

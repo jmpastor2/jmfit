@@ -8,6 +8,7 @@ import type {
   Goal,
   GoalKind,
   HealthDay,
+  HealthWorkout,
   LoggedSet,
   ProgramDay,
   Slot,
@@ -396,6 +397,10 @@ export const checkinAsHealthDay = (c: Checkin): HealthDay => ({
   vo2max: null,
   weight: null,
   bodyFat: null,
+  kcalIn: null,
+  proteinG: null,
+  carbsG: null,
+  fatG: null,
 })
 
 export const toHealthDay = (r: Record<string, unknown>): HealthDay => ({
@@ -413,6 +418,21 @@ export const toHealthDay = (r: Record<string, unknown>): HealthDay => ({
   vo2max: num(r.vo2max),
   weight: num(r.weight),
   bodyFat: num(r.body_fat),
+  kcalIn: num(r.kcal_in),
+  proteinG: num(r.protein_g),
+  carbsG: num(r.carbs_g),
+  fatG: num(r.fat_g),
+})
+
+export const toHealthWorkout = (r: Record<string, unknown>): HealthWorkout => ({
+  id: String(r.id),
+  activity: String(r.activity),
+  name: r.display_name == null ? null : String(r.display_name),
+  startedAt: String(r.started_at),
+  durationS: num(r.duration_s),
+  avgHr: num(r.avg_hr),
+  kcal: num(r.kcal),
+  distanceM: num(r.distance_m),
 })
 
 /* ─── Gym machines ─── */

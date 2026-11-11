@@ -122,10 +122,18 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   botón para bajar el objetivo semanal al ritmo real cuando sobra por más de una sesión.
 
 - 2026-11-11: activado en producción el programa «Cuerpo completo + brazos · 3 días» (a petición
-  del usuario; PPL + Brazos sigue en Programas para volver con «Activar»). Google Health API ya
-  admite proyectos nuevos: toca desplegar `google-health` siguiendo `docs/google-health.md`, paso
-  a paso con el usuario. Con la pulsera conectada, el fútbol y otras actividades llegan solos
+  del usuario; PPL + Brazos sigue en Programas para volver con «Activar»). Con la pulsera conectada, el fútbol y otras actividades llegan solos
   (`health_workouts`), por eso no se ha hecho un registro manual de actividades.
+
+- 2026-11-11 (pulsera unificada): Google Health conectado y sincronizando a diario a las 08:00 Madrid
+  (cron `google-health-sync`, migración `20261111000000`), comida del día (permiso `nutrition`,
+  columnas `kcal_in/protein_g/carbs_g/fat_g`, migración `20261111010000`) y envío a Titra tras cada
+  sincronización (`health_ingest` en Titra; secretos `TITRA_INGEST_URL/KEY`, `TITRA_ANON_KEY`).
+  En la app: bloque «Comida» en Hoy (hoy, ayer, media semanal contra objetivos; «Actualizar»
+  sincroniza al momento), actividades de la pulsera (fútbol, natación…) en Entrenar, en la semana
+  (días a medias en las marcas, «Además: …») y en la racha; el fútbol cansa piernas en «Hace
+  cuánto entrenas cada músculo» y la sesión a medida no las propone al día siguiente
+  (`train/activities.ts`). Aviso en Hoy si la pulsera deja de sincronizar.
 
 ## Pendiente
 

@@ -250,6 +250,11 @@ export interface HealthDay {
   vo2max: number | null
   weight: number | null
   bodyFat: number | null
+  /** Food logged in Google Health that day (null: nothing logged). */
+  kcalIn: number | null
+  proteinG: number | null
+  carbsG: number | null
+  fatG: number | null
 }
 
 export interface Checkin {
@@ -295,4 +300,16 @@ export interface UserGoal {
   startDate: string
   deadline: string | null
   achievedAt: string | null
+}
+
+/** A session recorded by the band (football, a swim, a walk…), not logged in Forja. */
+export interface HealthWorkout {
+  id: string
+  activity: string
+  name: string | null
+  startedAt: string
+  durationS: number | null
+  avgHr: number | null
+  kcal: number | null
+  distanceM: number | null
 }

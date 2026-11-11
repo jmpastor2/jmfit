@@ -130,6 +130,10 @@ export interface HealthDailyDbRow {
   vo2max: number | string | null
   weight: number | string | null
   body_fat: number | string | null
+  kcal_in?: number | null
+  protein_g?: number | string | null
+  carbs_g?: number | string | null
+  fat_g?: number | string | null
 }
 
 const n = (v: number | string | null): number | null => (v === null ? null : Number(v))
@@ -150,5 +154,9 @@ export function healthDayFromRow(r: HealthDailyDbRow): HealthDay {
     vo2max: n(r.vo2max),
     weight: n(r.weight),
     bodyFat: n(r.body_fat),
+    kcalIn: r.kcal_in ?? null,
+    proteinG: n(r.protein_g ?? null),
+    carbsG: n(r.carbs_g ?? null),
+    fatG: n(r.fat_g ?? null),
   }
 }
