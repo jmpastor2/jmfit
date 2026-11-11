@@ -263,6 +263,40 @@ describe('normalizeDaily', () => {
   })
 })
 
+describe('nutrition', () => {
+  const day = (d: number, nutritionLog: object) => ({
+    civilStartTime: { date: { year: 2026, month: 11, day: d } },
+    nutritionLog,
+  })
+  it('stores what was eaten each day and leaves days with nothing logged empty', () => {
+    const rows = normalizeDaily({
+      ...emptyPayload(),
+      nutrition: [
+        day(10, {
+          energy: { kcalSum: 2412.6, userProvidedUnitLast: 'KILOCALORIE' },
+          totalCarbohydrate: { gramsSum: 251.24 },
+          totalFat: { gramsSum: 80 },
+          nutrients: [
+            { nutrient: 'FIBER', quantity: { gramsSum: 22 } },
+            { nutrient: 'PROTEIN', quantity: { gramsSum: 148.37 } },
+          ],
+        }),
+        day(11, { energy: { kcalSum: 0 } }),
+        day(12, {}),
+      ],
+    })
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      date: '2026-11-10',
+      kcal_in: 2413,
+      protein_g: 148.4,
+      carbs_g: 251.2,
+      fat_g: 80,
+      steps: null,
+    })
+  })
+})
+
 describe('normalizeWorkouts', () => {
   it('maps exercise summary fields and converts units', () => {
     const run: ApiDataPoint = {

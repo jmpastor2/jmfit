@@ -136,6 +136,13 @@ export interface ApiDailyRollupDataPoint {
   activeEnergyBurned?: { kcalSum?: number }
   weight?: { weightGramsAvg?: number }
   bodyFat?: { bodyFatPercentageAvg?: number }
+  /** NutritionLogRollupValue: what was eaten that day. */
+  nutritionLog?: {
+    energy?: { kcalSum?: number }
+    totalCarbohydrate?: { gramsSum?: number }
+    totalFat?: { gramsSum?: number }
+    nutrients?: { nutrient?: string; quantity?: { gramsSum?: number } }[]
+  }
 }
 
 export interface ApiDailyRollUpResponse {
@@ -159,6 +166,10 @@ export interface HealthDailyRow {
   vo2max: number | null
   weight: number | null
   body_fat: number | null
+  kcal_in: number | null
+  protein_g: number | null
+  carbs_g: number | null
+  fat_g: number | null
   raw: Record<string, unknown>
 }
 
@@ -186,6 +197,8 @@ export interface SyncPayload {
   hrv: ApiDataPoint[]
   vo2max: ApiDataPoint[]
   sleep: ApiDataPoint[]
+  /** Optional: only with the nutrition scope. */
+  nutrition?: ApiDailyRollupDataPoint[]
 }
 
 /* ───────────── Small helpers ───────────── */
@@ -296,6 +309,10 @@ const emptyRow = (date: string): HealthDailyRow => ({
   vo2max: null,
   weight: null,
   body_fat: null,
+  kcal_in: null,
+  protein_g: null,
+  carbs_g: null,
+  fat_g: null,
   raw: {},
 })
 
@@ -381,6 +398,23 @@ export function normalizeDaily(payload: SyncPayload): HealthDailyRow[] {
     const date = rollupDate(p)
     const v = num(p.bodyFat?.bodyFatPercentageAvg)
     if (date && v !== null) row(date).body_fat = round(v, 1)
+  }
+
+  for (const p of payload.nutrition ?? []) {
+    const date = rollupDate(p)
+    const n = p.nutritionLog
+    const kcal = num(n?.energy?.kcalSum)
+    // A day with nothing logged comes back empty (or as zero): leave it null, not «0 kcal».
+    if (!date || !n || !kcal) continue
+    const r = row(date)
+    const grams = (v: number | undefined) => {
+      const g = num(v)
+      return g === null ? null : round(g, 1)
+    }
+    r.kcal_in = Math.round(kcal)
+    r.carbs_g = grams(n.totalCarbohydrate?.gramsSum)
+    r.fat_g = grams(n.totalFat?.gramsSum)
+    r.protein_g = grams(n.nutrients?.find((x) => x.nutrient === 'PROTEIN')?.quantity?.gramsSum)
   }
 
   for (const p of payload.restingHr) {

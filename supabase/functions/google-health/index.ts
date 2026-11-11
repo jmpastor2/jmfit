@@ -70,7 +70,8 @@ const SCOPE_ACTIVITY = 'https://www.googleapis.com/auth/googlehealth.activity_an
 const SCOPE_METRICS =
   'https://www.googleapis.com/auth/googlehealth.health_metrics_and_measurements.readonly'
 const SCOPE_SLEEP = 'https://www.googleapis.com/auth/googlehealth.sleep.readonly'
-const SCOPES = [SCOPE_ACTIVITY, SCOPE_METRICS, SCOPE_SLEEP]
+const SCOPE_NUTRITION = 'https://www.googleapis.com/auth/googlehealth.nutrition.readonly'
+const SCOPES = [SCOPE_ACTIVITY, SCOPE_METRICS, SCOPE_SLEEP, SCOPE_NUTRITION]
 
 const FIRST_SYNC_DAYS = 30
 const DEFAULT_SYNC_DAYS = 7
@@ -144,6 +145,35 @@ function constantTimeEquals(a: string, b: string): boolean {
 
 const googleConfigured = () =>
   Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && STATE_SECRET && APP_URL)
+
+/**
+ * Titra (the other app, its own Supabase project) shows the same band data: after each sync the
+ * days just read go to its `health_ingest` function, which stores them as measurements. One
+ * Google connection for both. Optional (three secrets) and never fatal: Forja's sync is done.
+ */
+async function pushToTitra(
+  daily: { date: string }[],
+  workouts: { started_at: string; activity: string }[],
+): Promise<void> {
+  const url = env('TITRA_INGEST_URL')
+  const key = env('TITRA_INGEST_KEY')
+  const anon = env('TITRA_ANON_KEY')
+  if (!url || !key || !anon || !daily.length) return
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: anon, Authorization: `Bearer ${anon}` },
+      body: JSON.stringify({
+        p_key: key,
+        p_days: daily,
+        p_workouts: workouts.map((w) => ({ started_at: w.started_at, activity: w.activity })),
+      }),
+    })
+    if (!res.ok) console.error('titra ingest failed', res.status)
+  } catch (e) {
+    console.error('titra ingest failed', e instanceof Error ? e.message : 'error')
+  }
+}
 
 /* ───────────── Google OAuth ───────────── */
 
@@ -363,6 +393,13 @@ async function syncUser(
     const none = async <T>() => [] as T[]
 
     // Data type ids and scopes: https://developers.google.com/health/data-types
+    // Food is an extra: a failure there (scope not granted yet, nothing logged) must not cost
+    // the rest of the sync.
+    const nutrition = has(SCOPE_NUTRITION)
+      ? dailyRollUp(token, 'nutrition-log', start, endExclusive).catch(
+          () => [] as ApiDailyRollupDataPoint[],
+        )
+      : none<ApiDailyRollupDataPoint>()
     const [steps, activeEnergy, weight, bodyFat, restingHr, hrv, vo2max, sleepPts, exercise] =
       await Promise.all([
         has(SCOPE_ACTIVITY)
@@ -411,6 +448,7 @@ async function syncUser(
       hrv,
       vo2max,
       sleep: sleepPts,
+      nutrition: await nutrition,
     }
     const now = new Date().toISOString()
     const daily = normalizeDaily(payload).map((r) => ({ ...r, user_id: userId, updated_at: now }))
@@ -437,6 +475,8 @@ async function syncUser(
       .from('health_connections')
       .update({ status: 'connected', last_sync_at: now, last_error: null })
       .eq('user_id', userId)
+
+    await pushToTitra(daily, workouts)
 
     return { userId, days, dailyRows: daily.length, workouts: workouts.length }
   } catch (e) {
