@@ -143,6 +143,29 @@ export interface ApiDailyRollupDataPoint {
     totalFat?: { gramsSum?: number }
     nutrients?: { nutrient?: string; quantity?: { gramsSum?: number } }[]
   }
+  /** TimeInHeartRateZoneRollupValue. */
+  timeInHeartRateZone?: ApiZoneTimes
+}
+
+/** Time spent in each Fitbit heart rate zone (rollUp and dailyRollUp of time-in-heart-rate-zone). */
+export interface ApiZoneTimes {
+  timeInHeartRateZones?: { heartRateZone?: string; duration?: string }[]
+}
+
+/** Minutes in each zone, e.g. {"light": 4, "moderate": 2, "vigorous": 2, "peak": 52}. */
+export type ZoneMinutes = Partial<Record<'light' | 'moderate' | 'vigorous' | 'peak', number>>
+
+/** Zone times → whole minutes per zone; null when nothing was recorded. */
+export function zoneMinutes(v: ApiZoneTimes | undefined): ZoneMinutes | null {
+  const out: ZoneMinutes = {}
+  for (const z of v?.timeInHeartRateZones ?? []) {
+    const key = z.heartRateZone?.toLowerCase()
+    const s = parseDurationSeconds(z.duration)
+    if (!s || (key !== 'light' && key !== 'moderate' && key !== 'vigorous' && key !== 'peak'))
+      continue
+    out[key] = (out[key] ?? 0) + Math.round(s / 60)
+  }
+  return Object.keys(out).length ? out : null
 }
 
 export interface ApiDailyRollUpResponse {
@@ -170,6 +193,7 @@ export interface HealthDailyRow {
   protein_g: number | null
   carbs_g: number | null
   fat_g: number | null
+  zones: ZoneMinutes | null
   raw: Record<string, unknown>
 }
 
@@ -185,6 +209,8 @@ export interface HealthWorkoutRow {
   max_hr: number | null
   kcal: number | null
   distance_m: number | null
+  /** Minutes in each heart rate zone during the session (filled after a rollUp). */
+  zones?: ZoneMinutes | null
 }
 
 /** Everything one sync downloaded, grouped by data type. Missing scopes → empty arrays. */
@@ -199,6 +225,8 @@ export interface SyncPayload {
   sleep: ApiDataPoint[]
   /** Optional: only with the nutrition scope. */
   nutrition?: ApiDailyRollupDataPoint[]
+  /** Optional: time in heart rate zones per day. */
+  zones?: ApiDailyRollupDataPoint[]
 }
 
 /* ───────────── Small helpers ───────────── */
@@ -313,6 +341,7 @@ const emptyRow = (date: string): HealthDailyRow => ({
   protein_g: null,
   carbs_g: null,
   fat_g: null,
+  zones: null,
   raw: {},
 })
 
@@ -415,6 +444,12 @@ export function normalizeDaily(payload: SyncPayload): HealthDailyRow[] {
     r.carbs_g = grams(n.totalCarbohydrate?.gramsSum)
     r.fat_g = grams(n.totalFat?.gramsSum)
     r.protein_g = grams(n.nutrients?.find((x) => x.nutrient === 'PROTEIN')?.quantity?.gramsSum)
+  }
+
+  for (const p of payload.zones ?? []) {
+    const date = rollupDate(p)
+    const z = zoneMinutes(p.timeInHeartRateZone)
+    if (date && z) row(date).zones = z
   }
 
   for (const p of payload.restingHr) {

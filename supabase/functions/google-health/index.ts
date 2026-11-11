@@ -28,10 +28,12 @@ import {
   normalizeDaily,
   normalizeWorkouts,
   todayIn,
+  zoneMinutes,
   type ApiDailyRollUpResponse,
   type ApiDailyRollupDataPoint,
   type ApiDataPoint,
   type ApiDataPointsPage,
+  type HealthWorkoutRow,
   type SyncPayload,
 } from './normalize.ts'
 import { signState, verifyState } from './state.ts'
@@ -162,7 +164,11 @@ async function pushToTitra(
   try {
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: anon, Authorization: `Bearer ${anon}` },
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: anon,
+        Authorization: `Bearer ${anon}`,
+      },
       body: JSON.stringify({
         p_key: key,
         p_days: daily,
@@ -275,6 +281,49 @@ async function dailyRollUp(
     { method: 'POST', body: JSON.stringify(buildDailyRollUpBody(startIso, endExclusiveIso)) },
   )
   return res.rollupDataPoints ?? []
+}
+
+/**
+ * POST users/me/dataTypes/{type}/dataPoints:rollUp over one physical span, as a single window.
+ * https://developers.google.com/health/reference/rest/v4/users.dataTypes.dataPoints/rollUp
+ */
+async function rollUpSpan(
+  token: string,
+  dataType: string,
+  startIso: string,
+  seconds: number,
+): Promise<ApiDailyRollupDataPoint | null> {
+  const end = new Date(Date.parse(startIso) + seconds * 1000).toISOString()
+  const res = await healthFetch<ApiDailyRollUpResponse>(
+    token,
+    `users/me/dataTypes/${dataType}/dataPoints:rollUp`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        range: { startTime: startIso, endTime: end },
+        windowSize: `${seconds}s`,
+      }),
+    },
+  )
+  return res.rollupDataPoints?.[0] ?? null
+}
+
+/** Zones of each session of ten minutes or more, a few requests at a time. Never fatal. */
+async function addSessionZones(token: string, rows: HealthWorkoutRow[]): Promise<void> {
+  const todo = rows.filter((w) => (w.duration_s ?? 0) >= 600)
+  for (let i = 0; i < todo.length; i += 4) {
+    await Promise.all(
+      todo.slice(i, i + 4).map(async (w) => {
+        const p = await rollUpSpan(
+          token,
+          'time-in-heart-rate-zone',
+          w.started_at,
+          w.duration_s!,
+        ).catch(() => null)
+        w.zones = zoneMinutes(p?.timeInHeartRateZone)
+      }),
+    )
+  }
 }
 
 /**
@@ -400,6 +449,17 @@ async function syncUser(
           () => [] as ApiDailyRollupDataPoint[],
         )
       : none<ApiDailyRollupDataPoint>()
+    // Daily time in heart rate zones, 14 days per request at most; an extra, never fatal.
+    const zoneDays = has(SCOPE_ACTIVITY)
+      ? (async () => {
+          const out: ApiDailyRollupDataPoint[] = []
+          for (let from = start; from < endExclusive; from = addDaysIso(from, 14)) {
+            const to = addDaysIso(from, 14) < endExclusive ? addDaysIso(from, 14) : endExclusive
+            out.push(...(await dailyRollUp(token, 'time-in-heart-rate-zone', from, to)))
+          }
+          return out
+        })().catch(() => [] as ApiDailyRollupDataPoint[])
+      : none<ApiDailyRollupDataPoint>()
     const [steps, activeEnergy, weight, bodyFat, restingHr, hrv, vo2max, sleepPts, exercise] =
       await Promise.all([
         has(SCOPE_ACTIVITY)
@@ -449,10 +509,13 @@ async function syncUser(
       vo2max,
       sleep: sleepPts,
       nutrition: await nutrition,
+      zones: await zoneDays,
     }
     const now = new Date().toISOString()
     const daily = normalizeDaily(payload).map((r) => ({ ...r, user_id: userId, updated_at: now }))
-    const workouts = normalizeWorkouts(exercise).map((w) => ({
+    const sessions = normalizeWorkouts(exercise)
+    if (has(SCOPE_ACTIVITY)) await addSessionZones(token, sessions)
+    const workouts = sessions.map((w) => ({
       ...w,
       user_id: userId,
       updated_at: now,

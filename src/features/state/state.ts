@@ -14,7 +14,7 @@ import {
   sleepPerformance,
   type StrainPart,
 } from '@/domain/training'
-import type { Checkin, HealthDay, HealthWorkout, LoggedSet } from '@/domain/types'
+import type { Checkin, HealthDay, HealthWorkout, LoggedSet, ZoneMinutes } from '@/domain/types'
 
 export interface DayState {
   date: string
@@ -37,6 +37,9 @@ export interface DayState {
   hrv: number | null
   restingHr: number | null
   steps: number | null
+  /** Minutes in each heart rate zone over the day. */
+  zones: ZoneMinutes | null
+  vo2max: number | null
 }
 
 const isWholeNight = (d: HealthDay | null) => d?.sleepMin != null && d.sleepMin >= PARTIAL_NIGHT_MIN
@@ -102,6 +105,7 @@ export function dailyState(input: {
         label: w.name ?? w.activity,
         minutes: w.durationS ? w.durationS / 60 : null,
         avgHr: w.avgHr,
+        zones: w.zones ?? null,
       })),
       effectiveSets: setsOn.get(date) ?? 0,
       steps: day?.steps ?? null,
@@ -148,6 +152,8 @@ export function dailyState(input: {
       hrv: day?.hrvMs ?? null,
       restingHr: day?.restingHr ?? null,
       steps: day?.steps ?? null,
+      zones: day?.zones ?? null,
+      vo2max: day?.vo2max ?? null,
     })
   }
   return out

@@ -19,6 +19,8 @@ const night = (date: string, bed: string, wake: string, sleepMin: number): DaySt
   hrv: null,
   restingHr: null,
   steps: null,
+  zones: null,
+  vo2max: null,
 })
 
 describe('clock', () => {

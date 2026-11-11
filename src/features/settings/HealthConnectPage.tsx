@@ -227,7 +227,7 @@ export function HealthConnectPage() {
           sueño, FC en reposo, HRV y pasos de ayer. Son 20 segundos y alimentan la preparación de
           «Hoy» y las gráficas de recuperación.
         </p>
-        <Link to="/body?v=recovery" className="spec tap-link mt-3 inline-block text-gold">
+        <Link to="/body" className="spec tap-link mt-3 inline-block text-gold">
           Ver recuperación
         </Link>
       </section>

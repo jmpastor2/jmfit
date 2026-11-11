@@ -3,8 +3,10 @@
  * Pure functions.
  *
  * Strain (0–21) is the day's cardiovascular and muscular load:
- * - each session the band recorded scores Banister's TRIMP, minutes × HRr × 0.64·e^(1.92·HRr),
- *   where HRr is the average heart rate within the reserve between resting and maximum;
+ * - each session the band recorded scores its minutes in each heart rate zone, weighted by the
+ *   zone (Edwards' method, the closest to WHOOP's minute-by-minute strain); without zones,
+ *   Banister's TRIMP from the average: minutes × HRr × 0.64·e^(1.92·HRr), HRr being the
+ *   average heart rate within the reserve between resting and maximum;
  * - each effective set logged in Forja adds load the heart rate of lifting does not show;
  * - steps beyond a sedentary day add a little.
  * The total maps onto 0–21 with a saturating curve: going from 18 to 19 costs far more than
@@ -13,6 +15,8 @@
  *
  * Sleep is scored against what the body needed: a base need, plus extra after a hard day.
  */
+
+import type { ZoneMinutes } from '@/domain/types'
 
 /** Load per effective set: lifting tires far more than its average heart rate says. */
 export const SET_LOAD = 2.5
@@ -39,6 +43,18 @@ export function trimp(
   return minutes * hrr * 0.64 * Math.exp(1.92 * hrr)
 }
 
+/** Weight of a minute in each Fitbit zone, scaled to land on the same strain as TRIMP. */
+export const ZONE_WEIGHTS = { light: 0.7, moderate: 1.4, vigorous: 2.1, peak: 3.15 } as const
+
+/** Edwards' zone load of one session; null without zone minutes. */
+export function zoneLoad(zones: ZoneMinutes | null | undefined): number | null {
+  if (!zones) return null
+  let load = 0
+  for (const [k, w] of Object.entries(ZONE_WEIGHTS) as [keyof typeof ZONE_WEIGHTS, number][])
+    load += (zones[k] ?? 0) * w
+  return load > 0 ? load : null
+}
+
 export const strainFromLoad = (load: number) =>
   Math.round(STRAIN_MAX * (1 - Math.exp(-Math.max(0, load) / STRAIN_SCALE)) * 10) / 10
 
@@ -54,7 +70,12 @@ export interface DayStrain {
 
 /** The strain of one day from its sessions, sets and steps. */
 export function dayStrain(input: {
-  sessions: readonly { label: string; minutes: number | null; avgHr: number | null }[]
+  sessions: readonly {
+    label: string
+    minutes: number | null
+    avgHr: number | null
+    zones?: ZoneMinutes | null
+  }[]
   effectiveSets: number
   steps: number | null
   restingHr: number
@@ -62,7 +83,7 @@ export function dayStrain(input: {
 }): DayStrain {
   const parts: StrainPart[] = []
   for (const s of input.sessions) {
-    const t = trimp(s.minutes, s.avgHr, input.restingHr, input.maxHr)
+    const t = zoneLoad(s.zones) ?? trimp(s.minutes, s.avgHr, input.restingHr, input.maxHr)
     if (t) parts.push({ label: s.label, load: t })
   }
   if (input.effectiveSets > 0)

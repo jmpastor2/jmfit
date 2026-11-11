@@ -151,6 +151,16 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   inicio y fin de la noche desde `raw.sleep`). «Tu semana»: 7 días frente a los 7 anteriores y hasta
   3 consejos (`state/week.ts`). En Hoy, por la tarde, la hora de acostarse.
 
+- 2026-11-12 (Cuerpo = la pulsera): la pestaña Cuerpo abre en «Estado» (la parte de la pulsera, al
+  lado de Entrenar) y conserva «Composición» (Boditrax); sin pulsera muestra la recuperación del
+  check-in. `/estado` redirige a `/body`. Zonas de pulso de Google Health (`time-in-heart-rate-zone`):
+  por sesión (rollUp del intervalo) y por día, columnas `zones` en `health_workouts` y `health_daily`
+  (migración `20261112000000`, aplicada); la carga usa los minutos por zona (Edwards) cuando los hay.
+  «Forma»: minutos activos de 7 días frente a los 150 de la OMS, equilibrio de carga 7/28 días
+  (0,8–1,3) y VO₂ máx con su nivel ACSM por edad y sexo. «Diario»: hábitos de ayer (tabla `journal`
+  con RLS propia + `approved_only`) y su efecto en la recuperación de la mañana siguiente cuando hay
+  3 días con y 3 sin.
+
 ## Pendiente
 
 1. Publicar: GitHub → Settings → Pages → Source: **GitHub Actions** (una vez), y push a `main`.

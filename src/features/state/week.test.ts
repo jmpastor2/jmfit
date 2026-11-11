@@ -22,6 +22,8 @@ const day = (i: number, over: Partial<DayState> = {}): DayState => {
     hrv: 30,
     restingHr: 66,
     steps: 8000,
+    zones: null,
+    vo2max: null,
     ...over,
   }
 }

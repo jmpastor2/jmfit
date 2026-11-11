@@ -16,7 +16,7 @@ export function StateStrip({ states }: { states: DayState[] }) {
   const evening = useNow().getHours() >= 17
   const bed = evening ? bedtimeTonight(states, sleepNeedMin(today.strain), savedWakeAt()) : null
   return (
-    <Link to="/estado" className="mb-5 block border-y border-line py-4 active:bg-panel-2">
+    <Link to="/body" className="mb-5 block border-y border-line py-4 active:bg-panel-2">
       <div className="mb-3 flex items-center justify-between">
         <span className="spec text-ink-2">Estado · pulsera</span>
         <span className="spec flex items-center gap-0.5 text-gold">

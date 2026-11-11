@@ -9,6 +9,7 @@ import {
   parseDurationSeconds,
   pickMainSleeps,
   todayIn,
+  zoneMinutes,
   type ApiDataPoint,
   type SyncPayload,
 } from '../../supabase/functions/google-health/normalize.ts'
@@ -260,6 +261,39 @@ describe('normalizeDaily', () => {
         restingHr: [{ dailyRestingHeartRate: { date: { year: 2026, month: 3, day: 4 } } }],
       }),
     ).toEqual([])
+  })
+})
+
+describe('heart rate zones', () => {
+  it('turns zone durations into minutes and drops unknown zones', () => {
+    expect(
+      zoneMinutes({
+        timeInHeartRateZones: [
+          { heartRateZone: 'LIGHT', duration: '240s' },
+          { heartRateZone: 'PEAK', duration: '3120s' },
+          { heartRateZone: 'HEART_RATE_ZONE_UNSPECIFIED', duration: '60s' },
+        ],
+      }),
+    ).toEqual({ light: 4, peak: 52 })
+    expect(zoneMinutes({})).toBeNull()
+  })
+
+  it('stores the daily zones on the day', () => {
+    const [row] = normalizeDaily({
+      ...emptyPayload(),
+      zones: [
+        {
+          civilStartTime: { date: { year: 2026, month: 11, day: 10 } },
+          timeInHeartRateZone: {
+            timeInHeartRateZones: [
+              { heartRateZone: 'MODERATE', duration: '1740s' },
+              { heartRateZone: 'PEAK', duration: '3240s' },
+            ],
+          },
+        },
+      ],
+    })
+    expect(row).toMatchObject({ date: '2026-11-10', zones: { moderate: 29, peak: 54 } })
   })
 })
 

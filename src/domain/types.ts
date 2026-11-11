@@ -258,6 +258,8 @@ export interface HealthDay {
   /** When the main sleep of the night started and ended (instants), when the band knows. */
   sleepStart?: string | null
   sleepEnd?: string | null
+  /** Minutes in each heart rate zone that day. */
+  zones?: ZoneMinutes | null
 }
 
 export interface Checkin {
@@ -315,4 +317,15 @@ export interface HealthWorkout {
   avgHr: number | null
   kcal: number | null
   distanceM: number | null
+  /** Minutes in each heart rate zone during the session. */
+  zones?: ZoneMinutes | null
+}
+
+/** Minutes in each Fitbit heart rate zone (light, moderate, vigorous, peak). */
+export type ZoneMinutes = Partial<Record<'light' | 'moderate' | 'vigorous' | 'peak', number>>
+
+/** One day of the habits journal. */
+export interface JournalDay {
+  date: string
+  tags: string[]
 }

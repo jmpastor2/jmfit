@@ -7,7 +7,7 @@
  */
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
-import type { Checkin, LoggedSet, Scan, UserGoal } from '@/domain/types'
+import type { Checkin, JournalDay, LoggedSet, Scan, UserGoal } from '@/domain/types'
 import { useSession } from '@/features/auth/SessionProvider'
 import { WRITE_SCOPE } from '@/lib/queryClient'
 import { requireSupabase } from '@/lib/supabase'
@@ -122,6 +122,7 @@ const QUERIES_OF_TABLE: Record<string, string[]> = {
   goals: ['goals'],
   checkins: ['checkins'],
   gym_machines: ['machines'],
+  journal: ['journal'],
 }
 
 /**
@@ -593,6 +594,54 @@ export function useSaveCheckin() {
   )
 }
 
+/* ───────────── Journal ───────────── */
+
+/** What each day had (alcohol, a late dinner…), the last four months, newest first. */
+export function useJournal() {
+  const uid = useUid()
+  return useQuery({
+    queryKey: ['journal', uid],
+    queryFn: async ({ client }) => {
+      const since = new Date(Date.now() - 120 * 86_400_000).toISOString().slice(0, 10)
+      const rows = await readWithPending(client, 'journal', async () => {
+        const { data, error } = await requireSupabase()
+          .from('journal')
+          .select('date,tags')
+          .gte('date', since)
+        if (error) {
+          if (isMissingTable(error)) return []
+          throw error
+        }
+        return data as { date: string; tags: string[] }[]
+      })
+      return rows
+        .map((r) => ({ date: r.date, tags: r.tags ?? [] }))
+        .toSorted((a, b) => b.date.localeCompare(a.date))
+    },
+  })
+}
+
+export function useSaveJournal() {
+  const uid = useUid()
+  const { qc, upsert } = useWrites()
+  return useCallback(
+    async (day: JournalDay, opts: WriteOptions = {}) => {
+      qc.setQueryData<JournalDay[]>(['journal', uid], (prev = []) =>
+        [day, ...prev.filter((x) => x.date !== day.date)].toSorted((a, b) =>
+          b.date.localeCompare(a.date),
+        ),
+      )
+      await upsert({
+        ...opts,
+        table: 'journal',
+        rows: [{ date: day.date, tags: day.tags, updated_at: new Date().toISOString() }],
+        onConflict: 'user_id,date',
+      })
+    },
+    [qc, uid, upsert],
+  )
+}
+
 /**
  * Wearable days (Google Health). The tables arrive with the integration; until they exist
  * the query answers an empty list instead of an error.
@@ -629,7 +678,7 @@ export function useHealthWorkouts() {
       const since = new Date(Date.now() - 120 * 86_400_000).toISOString()
       const { data, error } = await requireSupabase()
         .from('health_workouts')
-        .select('id,activity,display_name,started_at,duration_s,avg_hr,kcal,distance_m')
+        .select('id,activity,display_name,started_at,duration_s,avg_hr,kcal,distance_m,zones')
         .gte('started_at', since)
         .order('started_at', { ascending: false })
       if (error) {

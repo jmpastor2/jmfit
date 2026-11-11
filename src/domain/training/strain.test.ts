@@ -7,6 +7,7 @@ import {
   strainFromLoad,
   strainTarget,
   trimp,
+  zoneLoad,
 } from './strain'
 
 const maxHr = maxHeartRate(35) // 184
@@ -39,6 +40,28 @@ describe('strain', () => {
     expect(gym.strain).toBeGreaterThan(8)
     expect(gym.strain).toBeLessThan(11)
     expect(gym.parts[0]!.label).toBe('20 series efectivas')
+  })
+
+  it('uses the minutes in each zone when the band has them', () => {
+    expect(zoneLoad({ light: 4, moderate: 2, vigorous: 2, peak: 52 })).toBeCloseTo(173.6, 1)
+    expect(zoneLoad({})).toBeNull()
+    expect(zoneLoad(null)).toBeNull()
+    const match = dayStrain({
+      sessions: [
+        {
+          label: 'Fútbol',
+          minutes: 60,
+          avgHr: 165,
+          zones: { light: 4, moderate: 2, vigorous: 2, peak: 52 },
+        },
+      ],
+      effectiveSets: 0,
+      steps: null,
+      restingHr: 68,
+      maxHr,
+    })
+    expect(match.strain).toBeGreaterThan(15)
+    expect(match.strain).toBeLessThan(17)
   })
 
   it('saturates towards 21 and never goes past it', () => {

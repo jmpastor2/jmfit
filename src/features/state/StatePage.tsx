@@ -4,37 +4,28 @@ import { LineChart } from '@/components/charts/LineChart'
 import { CountUp } from '@/components/kpi/CountUp'
 import { Kpi } from '@/components/kpi/Kpi'
 import { Meter } from '@/components/kpi/Meter'
-import { PageHeader } from '@/components/layout/PageHeader'
-import { Chip, EmptyState } from '@/components/ui/primitives'
+import { Chip } from '@/components/ui/primitives'
 import { formatNumber, STRAIN_MAX, strainTarget } from '@/domain/training'
 import { BAND_COLOR, BAND_LABEL, BAND_TEXT, hm, lastNight, shortDay, stateAdvice } from './format'
 import { useHealthDays, useMe, useWorkouts } from '@/data/hooks'
 import { localDateKey, sleepNeedMin } from '@/domain/training'
 import { useOtherActivities } from '@/features/train/useActivities'
 import { RecoveryStrainChart } from './RecoveryStrainChart'
+import { FitnessSection, JournalSection, ZonesBar } from './StateExtras'
 import { bedtimeTonight, clockText, saveWakeAt, savedWakeAt, sleepHabits } from './sleep'
 import { weekReport, type WeekNumbers } from './week'
 import { recentMean, recoveryBand, type DayState } from './state'
 import { useDayStates } from './useDayStates'
 
 /**
- * «Estado»: the band read like a WHOOP. Recovery says how ready the body is, strain how much
- * it was asked today, sleep how much of what it needed it got; then four weeks of each.
+ * «Estado», the band's side of the app (Cuerpo tab): recovery says how ready the body is,
+ * strain how much it was asked today, sleep how much of what it needed it got; then the week,
+ * fitness markers, four weeks of history and the habits journal. Renders nothing without band
+ * data (Cuerpo then shows the check-in recovery).
  */
-export function StatePage() {
+export function StateView() {
   const states = useDayStates(28)
-  if (!states) {
-    return (
-      <>
-        <PageHeader back title="Estado" />
-        <EmptyState
-          title="Sin datos de la pulsera"
-          description="Conecta Google Health en Más → Pulsera y salud y aquí verás tu recuperación, tu carga y tu sueño cada día."
-        />
-      </>
-    )
-  }
-  return <State states={states} />
+  return states ? <State states={states} /> : null
 }
 
 function State({ states }: { states: DayState[] }) {
@@ -76,8 +67,6 @@ function State({ states }: { states: DayState[] }) {
 
   return (
     <>
-      <PageHeader back eyebrow="Pulsera · hoy" title="Estado" />
-
       {/* The three numbers of the day. */}
       <section className="border-b border-line pb-5">
         <div className="grid grid-cols-3 gap-3">
@@ -123,6 +112,8 @@ function State({ states }: { states: DayState[] }) {
       </section>
 
       {report && <WeekSection now={report.now} before={report.before} tips={report.tips} />}
+
+      <FitnessSection states={states} />
 
       <Section
         title="Cuatro semanas"
@@ -232,6 +223,7 @@ function State({ states }: { states: DayState[] }) {
             />
           </div>
         )}
+        <ZonesBar zones={today.zones} title="Pulso por zonas · hoy" />
         {today.strainParts.length > 0 ? (
           <ul className="mb-4 divide-y divide-line">
             {today.strainParts.map((p) => (
@@ -348,10 +340,12 @@ function State({ states }: { states: DayState[] }) {
         </p>
       </Section>
 
+      <JournalSection states={states} />
+
       <p className="py-5 text-[12px] leading-snug text-muted">
-        Cálculo propio de Forja con los datos de Google Health, inspirado en WHOOP: la carga usa el
-        TRIMP de Banister con tu pulso máximo estimado por edad; la recuperación compara VFC, pulso
-        en reposo y sueño con tus 4 últimas semanas. Orientativo, no es un dato médico.
+        Cálculo propio de Forja con los datos de Google Health, inspirado en WHOOP: la carga usa los
+        minutos en cada zona de pulso (o el TRIMP de Banister sin zonas); la recuperación compara
+        VFC, pulso en reposo y sueño con tus 4 últimas semanas. Orientativo, no es un dato médico.
       </p>
     </>
   )

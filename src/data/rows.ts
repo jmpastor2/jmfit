@@ -9,6 +9,7 @@ import type {
   GoalKind,
   HealthDay,
   HealthWorkout,
+  ZoneMinutes,
   LoggedSet,
   ProgramDay,
   Slot,
@@ -423,6 +424,7 @@ export const toHealthDay = (r: Record<string, unknown>): HealthDay => ({
   carbsG: num(r.carbs_g),
   fatG: num(r.fat_g),
   ...sleepWindow(r.raw),
+  zones: (r.zones as ZoneMinutes | null) ?? null,
 })
 
 /** Start and end of the night from the sync's raw record (`raw.sleep`). */
@@ -443,6 +445,7 @@ export const toHealthWorkout = (r: Record<string, unknown>): HealthWorkout => ({
   avgHr: num(r.avg_hr),
   kcal: num(r.kcal),
   distanceM: num(r.distance_m),
+  zones: (r.zones as ZoneMinutes | null) ?? null,
 })
 
 /* ─── Gym machines ─── */
