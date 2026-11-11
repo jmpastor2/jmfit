@@ -28,6 +28,7 @@ const ExercisePage = named(() => import('@/features/exercise/ExercisePage'), 'Ex
 const LibraryPage = named(() => import('@/features/exercise/LibraryPage'), 'LibraryPage')
 const BodyPage = named(() => import('@/features/body/BodyPage'), 'BodyPage')
 const MorePage = named(() => import('@/features/more/MorePage'), 'MorePage')
+const StatePage = named(() => import('@/features/state/StatePage'), 'StatePage')
 const GoalsPage = named(() => import('@/features/goals/GoalsPage'), 'GoalsPage')
 const GymPage = named(() => import('@/features/gym/GymPage'), 'GymPage')
 const MachinePage = named(() => import('@/features/gym/MachinePage'), 'MachinePage')
@@ -61,6 +62,7 @@ export const router = createHashRouter([
       { path: 'library', element: page(<LibraryPage />) },
       { path: 'body', element: page(<BodyPage />) },
       { path: 'more', element: page(<MorePage />) },
+      { path: 'estado', element: page(<StatePage />) },
       { path: 'goals', element: page(<GoalsPage />) },
       { path: 'gym', element: page(<GymPage />) },
       // A QR or NFC tag on a machine opens this: its exercise, settings and a start button.

@@ -305,6 +305,16 @@
     transform-origin: left;
     animation: meter-grow 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
   }
+  /* A bar of a daily chart rising from its base. */
+  .bar-grow {
+    transform-origin: bottom;
+    animation: bar-grow 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+  /* A line drawn along its path (set pathLength=1 on the element). */
+  .draw-line {
+    stroke-dasharray: 1;
+    animation: draw-line 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.15s backwards;
+  }
   /* A chart drawn from left to right. */
   .chart-reveal {
     animation: chart-reveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
@@ -357,6 +367,24 @@
   }
   to {
     transform: scaleX(1);
+  }
+}
+
+@keyframes draw-line {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes bar-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
   }
 }
 

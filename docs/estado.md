@@ -135,6 +135,14 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   cuánto entrenas cada músculo» y la sesión a medida no las propone al día siguiente
   (`train/activities.ts`). Aviso en Hoy si la pulsera deja de sincronizar.
 
+- 2026-11-12 (Estado, estilo WHOOP): pantalla `/estado` y franja al principio de Hoy con
+  recuperación (0–100 %, necesita dos señales: VFC o pulso con una semana de historial, noche
+  completa o check-in; las noches registradas a medias, < 4 h, no cuentan), carga del día (0–21:
+  TRIMP de Banister de cada sesión de la pulsera con FCmáx 208 − 0,7·edad, + 2,5 por serie
+  efectiva de Forja, + pasos sobre 3.000; curva saturante, `domain/training/strain.ts`) con
+  objetivo según la recuperación, y sueño frente a lo necesario (7:30 h + hasta 1 h tras un día
+  duro). Gráfica de cuatro semanas carga/recuperación, VFC y pulso en reposo, fases del sueño.
+
 ## Pendiente
 
 1. Publicar: GitHub → Settings → Pages → Source: **GitHub Actions** (una vez), y push a `main`.

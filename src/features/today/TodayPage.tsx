@@ -53,6 +53,8 @@ import { useNow } from '@/lib/useNow'
 import { dailyWeights, weightEntries, weightSourceLabel } from '@/features/body/weight'
 import { CheckinSheet } from './CheckinSheet'
 import { FoodBlock } from './FoodBlock'
+import { StateStrip } from '@/features/state/StateStrip'
+import { useDayStates } from '@/features/state/useDayStates'
 import {
   SCAN_STALE_DAYS,
   agoLabel,
@@ -76,6 +78,8 @@ export function TodayPage() {
   const meso = program ? mesoWeek(program, now, workouts) : null
   const name = me.displayName.trim()
   const latestWeight = useLatestWeight()
+  // With the band connected, recovery, strain and sleep replace the plain readiness block.
+  const states = useDayStates(14)
 
   return (
     <>
@@ -89,9 +93,11 @@ export function TodayPage() {
             : undefined
         }
       />
+      {/* How the body is comes first: it decides how hard today's workout should be. */}
+      {states && <StateStrip states={states} />}
       <TodayWorkout program={program} now={now} />
       <BandAlert />
-      <ReadinessBlock />
+      {!states && <ReadinessBlock />}
       <FoodBlock now={now} bodyweight={latestWeight?.value ?? null} />
       <WeekBlock now={now} weeklyTarget={me.weeklyTarget} program={program} />
       <MusclesBlock now={now} />
