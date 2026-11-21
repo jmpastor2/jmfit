@@ -1,6 +1,8 @@
 /**
- * Plate calculator for barbell loads.
+ * Plate calculator for barbell loads, and what the logged weight means for each kind of
+ * equipment (bar included or not, per dumbbell, discs per side).
  */
+import type { Equipment } from '@/domain/types'
 
 /** kg → integer grams. */
 const g = (kg: number) => Math.round(kg * 1000)
@@ -46,4 +48,57 @@ export function platesPerSide(
   }
   const loadedG = barG + 2 * perSide.reduce((s, p) => s + g(p), 0)
   return { perSide, remainder: (totalG - loadedG) / 1000 }
+}
+
+/** Weight of an EZ bar, the usual 10 kg. */
+export const EZ_BAR_KG = 10
+
+export interface LoadModel {
+  /** Label of the weight field. */
+  label: string
+  /** One line saying what the number counts, so it means the same every time. */
+  hint: string
+  /**
+   * Kilos of the number that are not discs (the bar), or null when there are no discs to
+   * split per side (dumbbells, pin stacks, cables).
+   */
+  base: number | null
+}
+
+/**
+ * What the logged weight counts for each kind of equipment. Free bars count the bar (20 kg on
+ * a barbell); disc machines and the Smith count the discs only, both sides added; dumbbells
+ * count one dumbbell; stacks and cables what the pin says.
+ */
+export function loadModel(equipment: Equipment, barKg: number): LoadModel {
+  switch (equipment) {
+    case 'barbell':
+      return { label: 'Kg totales', hint: `Con la barra (${barKg} kg)`, base: barKg }
+    case 'ez_bar':
+      return { label: 'Kg totales', hint: `Con la barra Z (${EZ_BAR_KG} kg)`, base: EZ_BAR_KG }
+    case 'plate_loaded':
+      return { label: 'Kg en discos', hint: 'Suma de los discos de los dos lados', base: 0 }
+    case 'smith':
+      return { label: 'Kg en discos', hint: 'Solo los discos, sin la barra guiada', base: 0 }
+    case 'dumbbell':
+      return { label: 'Kg por mancuerna', hint: 'El peso de una mancuerna', base: null }
+    case 'kettlebell':
+      return { label: 'Kg', hint: 'El peso de la kettlebell', base: null }
+    case 'machine':
+    case 'cable':
+      return { label: 'Kg', hint: 'Lo que marca la placa de la pila', base: null }
+    default:
+      return { label: 'Kg', hint: '', base: null }
+  }
+}
+
+/** The discs for each side of `total` under `model`, or null when it does not apply. */
+export function discsPerSide(
+  total: number | null,
+  model: LoadModel,
+  available: readonly number[] = DEFAULT_PLATES,
+): (PlateLoad & { sideKg: number }) | null {
+  if (total == null || model.base == null || total <= model.base) return null
+  const load = platesPerSide(total, model.base, available)
+  return { ...load, sideKg: (total - model.base) / 2 }
 }

@@ -26,7 +26,7 @@ import {
   useWorkouts,
 } from '@/data/hooks'
 import type { WorkoutFull } from '@/data/rows'
-import { detectPRs, estimate1RM, formatNumber, platesPerSide } from '@/domain/training'
+import { detectPRs, discsPerSide, estimate1RM, formatNumber, loadModel } from '@/domain/training'
 import type { Exercise, LoggedSet, PersonalRecord, SetKind, SetTarget } from '@/domain/types'
 import { ExercisePicker } from '@/features/exercise/ExercisePicker'
 import { useExerciseLookup } from '@/features/exercise/lookup'
@@ -964,10 +964,10 @@ function ActiveSet({
   const changeRir = edit(setRir)
   const bump = (d: number) =>
     changeWeight(formatNumber(Math.max(0, Math.round(((w ?? 0) + d) * 100) / 100)))
-  const load =
-    exercise.equipment === 'barbell' && w != null && w > barKg
-      ? platesPerSide(w, barKg, plates)
-      : null
+  // What the number counts on this equipment (bar included, discs only, one dumbbell…) and,
+  // with discs, what goes on each side.
+  const model = loadModel(exercise.equipment, barKg)
+  const load = exercise.timed ? null : discsPerSide(w, model, plates)
   const kindLabel: Record<SetKind, string> = {
     warmup: 'Calentamiento',
     work: 'Serie',
@@ -988,7 +988,7 @@ function ActiveSet({
       ) : (
         <div className="grid grid-cols-2 gap-3">
           <Stepper
-            label={exercise.bodyweight ? 'Lastre kg' : 'Kg'}
+            label={exercise.bodyweight ? 'Lastre kg' : model.label}
             value={weight}
             onChange={changeWeight}
             onMinus={() => bump(-step)}
@@ -1002,6 +1002,25 @@ function ActiveSet({
             onMinus={() => changeReps(String(Math.max(0, (r ?? 0) - 1)))}
             onPlus={() => changeReps(String((r ?? 0) + 1))}
           />
+        </div>
+      )}
+      {!exercise.timed && !exercise.bodyweight && model.hint && (
+        <p className="mt-2 text-[12px] text-muted">{model.hint}</p>
+      )}
+      {load && (load.perSide.length > 0 || load.remainder > 0) && (
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-[6px] border border-line bg-panel px-3 py-2">
+          <span className="min-w-0">
+            <span className="spec block">Cada lado</span>
+            <span className="readout block text-[18px] font-semibold text-ink">
+              {load.perSide.map((p) => formatNumber(p)).join(' + ') || '—'}
+            </span>
+          </span>
+          <span className="shrink-0 text-right text-[12.5px] text-muted">
+            {formatNumber(load.sideKg)} kg por lado
+            {load.remainder > 0 && (
+              <span className="block text-warn">faltan {formatNumber(load.remainder)} kg</span>
+            )}
+          </span>
         </div>
       )}
       {canRamp && (
@@ -1057,13 +1076,6 @@ function ActiveSet({
             ))}
           </div>
         </div>
-      )}
-      {load && (load.perSide.length > 0 || load.remainder > 0) && (
-        <p className="mt-3 text-[12.5px] text-muted">
-          Por lado:{' '}
-          <span className="text-ink-2">{load.perSide.map((p) => formatNumber(p)).join(' + ')}</span>
-          {load.remainder > 0 && ` (faltan ${formatNumber(load.remainder)} kg)`}
-        </p>
       )}
       <Button
         block

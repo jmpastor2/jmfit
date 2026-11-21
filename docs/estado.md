@@ -161,6 +161,12 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   con RLS propia + `approved_only`) y su efecto en la recuperación de la mañana siguiente cuando hay
   3 días con y 3 sin.
 
+- 2026-11-21 (peso por tipo de equipo): cada serie dice qué cuenta el número (`loadModel` en
+  `domain/training/plates.ts`): barra libre «Kg totales» con la barra (Ajustes, 20 kg) y barra Z
+  (10 kg); máquinas de discos y multipower «Kg en discos», suma de los dos lados sin la barra;
+  mancuernas «Kg por mancuerna»; pila y polea lo que marca la placa. Con discos, «Cada lado» con
+  los discos y los kg por lado (también en máquinas de discos), justo debajo del peso.
+
 ## Pendiente
 
 1. Publicar: GitHub → Settings → Pages → Source: **GitHub Actions** (una vez), y push a `main`.

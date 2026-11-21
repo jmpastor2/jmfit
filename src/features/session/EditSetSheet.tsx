@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Field'
 import { Sheet } from '@/components/ui/Sheet'
-import { formatNumber } from '@/domain/training'
+import { formatNumber, loadModel } from '@/domain/training'
+import { useMe } from '@/data/hooks'
 import type { Exercise, LoggedSet } from '@/domain/types'
 
 const parse = (s: string): number | null => {
@@ -64,6 +65,7 @@ function EditForm({
   onSave: (next: LoggedSet) => Promise<void>
   onDelete: (set: LoggedSet) => Promise<void>
 }) {
+  const { barKg } = useMe()
   const [weight, setWeight] = useState(set.weight == null ? '' : formatNumber(set.weight))
   const [reps, setReps] = useState(set.reps == null ? '' : String(set.reps))
   const [rir, setRir] = useState<number | null>(set.rir)
@@ -94,7 +96,9 @@ function EditForm({
     <div className="flex flex-col gap-4 pb-2">
       <div className={clsx('grid gap-3', timed ? 'grid-cols-1' : 'grid-cols-2')}>
         {!timed && (
-          <Field label={exercise.bodyweight ? 'Lastre' : 'Peso'}>
+          <Field
+            label={exercise.bodyweight ? 'Lastre' : loadModel(exercise.equipment, barKg).label}
+          >
             {(id) => (
               <Input
                 id={id}
