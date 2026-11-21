@@ -69,7 +69,7 @@ function State({ states }: { states: DayState[] }) {
     <>
       {/* The three numbers of the day. */}
       <section className="border-b border-line pb-5">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-[1.15fr_1fr_1fr] gap-3">
           <Hero
             label="Recuperación"
             value={today.recovery}
@@ -380,7 +380,7 @@ function Hero({
   const f = 10 ** digits
   return (
     <div className="min-w-0">
-      <span className="spec block">{label}</span>
+      <span className="spec block truncate text-[11.5px] tracking-[0.08em]">{label}</span>
       <span className={clsx('readout block text-[40px] font-semibold leading-none', className)}>
         {value == null ? (
           '—'

@@ -79,7 +79,7 @@ export function TodayPage() {
   const name = me.displayName.trim()
   const latestWeight = useLatestWeight()
   // With the band connected, recovery, strain and sleep replace the plain readiness block.
-  const states = useDayStates(14)
+  const states = useDayStates(28)
 
   return (
     <>

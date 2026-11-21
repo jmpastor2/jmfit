@@ -23,7 +23,7 @@ export function StateStrip({ states }: { states: DayState[] }) {
           Ver <ChevronRight className="size-3.5" aria-hidden />
         </span>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-[1.15fr_1fr_1fr] gap-3">
         <Figure
           label="Recuperación"
           value={today.recovery != null ? `${today.recovery}` : '—'}
@@ -66,7 +66,7 @@ function Figure({
 }) {
   return (
     <span className="min-w-0">
-      <span className="spec block">{label}</span>
+      <span className="spec block truncate text-[11.5px] tracking-[0.08em]">{label}</span>
       <span className={`readout block text-[30px] font-semibold leading-none ${className ?? ''}`}>
         {value}
       </span>
