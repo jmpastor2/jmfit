@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { HealthDay } from '@/domain/types'
-import { foodSummary } from './nutrition'
+import { activityExtra, foodSummary } from './nutrition'
 
 const day = (date: string, kcalIn: number | null, proteinG: number | null = null): HealthDay => ({
   date,
@@ -53,5 +53,21 @@ describe('foodSummary', () => {
   it('uses the protein target from Ajustes when there is one', () => {
     const s = foodSummary([day('2026-11-11', 2000, 100)], now, { kcal: null, protein: 160 }, 76)!
     expect(s).toMatchObject({ proteinTarget: 160, proteinEstimated: false, today: null })
+  })
+})
+
+describe('activityExtra', () => {
+  const days = Array.from({ length: 10 }, (_, i) => ({
+    ...day(`2026-11-0${i}`.length === 10 ? `2026-11-0${i}` : `2026-11-${i}`, null),
+    activeKcal: 500,
+  }))
+  it('adds what today burned beyond a usual day, never less, capped', () => {
+    const withMatch = [...days, { ...day('2026-11-12', null), activeKcal: 1240 }]
+    expect(activityExtra(withMatch, '2026-11-12')).toBe(600)
+    const light = [...days, { ...day('2026-11-12', null), activeKcal: 620 }]
+    expect(activityExtra(light, '2026-11-12')).toBe(100)
+    const morning = [...days, { ...day('2026-11-12', null), activeKcal: 80 }]
+    expect(activityExtra(morning, '2026-11-12')).toBe(0)
+    expect(activityExtra(days.slice(0, 3), '2026-11-12')).toBe(0)
   })
 })

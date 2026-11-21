@@ -11,7 +11,7 @@ import { JOURNAL_TAGS, MIN_DAYS, journalImpact } from './journal'
 import type { DayState } from './state'
 
 const ZONES = [
-  { key: 'light', label: 'Ligera', color: 'var(--panel-3)' },
+  { key: 'light', label: 'Ligera', color: 'var(--muted)' },
   { key: 'moderate', label: 'Moderada', color: 'var(--gold-dark)' },
   { key: 'vigorous', label: 'Intensa', color: 'var(--gold)' },
   { key: 'peak', label: 'Máxima', color: 'var(--gold-light)' },

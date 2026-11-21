@@ -36,7 +36,20 @@ import {
   type HealthWorkoutRow,
   type SyncPayload,
 } from './normalize.ts'
+import { morningMessage, type MorningDay } from './morning.ts'
 import { signState, verifyState } from './state.ts'
+import webpushModule from 'npm:web-push@3.6.7'
+
+/** web-push is CommonJS without bundled types: the part used here, typed by hand. */
+type WebPush = {
+  setVapidDetails(subject: string, publicKey: string, privateKey: string): void
+  sendNotification(
+    subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
+    payload: string,
+    options: { TTL: number; urgency: 'very-low' | 'low' | 'normal' | 'high'; timeout: number },
+  ): Promise<{ statusCode: number }>
+}
+const webpush = webpushModule as unknown as WebPush
 
 /* ───────────── Config ───────────── */
 
@@ -668,6 +681,10 @@ async function actionSync(req: Request, body: Record<string, unknown>): Promise<
     for (const { user_id } of (data ?? []) as { user_id: string }[]) {
       try {
         results.push(await syncUser(db, user_id, days))
+        // The morning run also tells the person how the night went; never fatal.
+        await morningPush(db, user_id).catch((e) =>
+          console.error('morning push failed', e instanceof Error ? e.message : 'error'),
+        )
       } catch (e) {
         results.push({
           userId: user_id,
@@ -684,6 +701,98 @@ async function actionSync(req: Request, body: Record<string, unknown>): Promise<
   const userId = await requireUser(req)
   const r = await syncUser(db, userId, days)
   return json(req, 200, { days: r.days, dailyRows: r.dailyRows, workouts: r.workouts })
+}
+
+/**
+ * Once a day, between 05:00 and 11:59 local, after the sync: last night and the heart against
+ * their usual (Monday: the week) to every device of the person, unless switched off.
+ */
+async function morningPush(db: SupabaseClient, userId: string): Promise<void> {
+  const vapidPublic = env('VAPID_PUBLIC_KEY')
+  const vapidPrivate = env('VAPID_PRIVATE_KEY')
+  if (!vapidPublic || !vapidPrivate) return
+  const today = todayIn(HEALTH_TZ)
+  const hour = Number(
+    new Intl.DateTimeFormat('en-GB', {
+      hour: '2-digit',
+      hour12: false,
+      timeZone: HEALTH_TZ,
+    }).format(new Date()),
+  )
+  if (hour < 5 || hour > 11) return
+
+  const [{ data: conn }, { data: profile }] = await Promise.all([
+    db.from('health_connections').select('morning_push_on').eq('user_id', userId).maybeSingle(),
+    db.from('profiles').select('morning_push').eq('id', userId).maybeSingle(),
+  ])
+  if (conn?.morning_push_on === today || profile?.morning_push === false) return
+
+  const weekAgo = addDaysIso(today, -7)
+  const [{ data: days }, { data: gym }, { data: band }, { data: subs }] = await Promise.all([
+    db
+      .from('health_daily')
+      .select('date,sleep_min,hrv_ms,resting_hr,steps')
+      .eq('user_id', userId)
+      .gte('date', addDaysIso(today, -14))
+      .order('date'),
+    db
+      .from('workouts')
+      .select('id')
+      .eq('user_id', userId)
+      .not('ended_at', 'is', null)
+      .gte('started_at', `${weekAgo}T00:00:00`)
+      .lt('started_at', `${today}T00:00:00`),
+    db
+      .from('health_workouts')
+      .select('activity,started_at')
+      .eq('user_id', userId)
+      .gte('started_at', `${weekAgo}T00:00:00`)
+      .lt('started_at', `${today}T00:00:00`),
+    db.from('push_subscriptions').select('endpoint,p256dh,auth').eq('user_id', userId),
+  ])
+  const sport = new Set([
+    'SOCCER',
+    'RUNNING',
+    'SWIMMING',
+    'CYCLING',
+    'RACKET_SPORTS',
+    'TENNIS',
+    'BASKETBALL',
+    'HIKING',
+  ])
+  const message = morningMessage({
+    days: (days ?? []) as MorningDay[],
+    today,
+    monday: new Date(`${today}T12:00:00Z`).getUTCDay() === 1,
+    gymSessions: gym?.length ?? 0,
+    sports: (band ?? []).filter((b) => sport.has(b.activity as string)).length,
+  })
+  // Marked even without devices or news: one attempt a day.
+  await db.from('health_connections').update({ morning_push_on: today }).eq('user_id', userId)
+  if (!message || !subs?.length) return
+
+  webpush.setVapidDetails(env('VAPID_SUBJECT'), vapidPublic, vapidPrivate)
+  const payload = JSON.stringify({ ...message, tag: 'forja-morning' })
+  const gone: string[] = []
+  await Promise.all(
+    subs.map(async (s) => {
+      try {
+        await webpush.sendNotification(
+          {
+            endpoint: s.endpoint as string,
+            keys: { p256dh: s.p256dh as string, auth: s.auth as string },
+          },
+          payload,
+          // Worth reading for a few hours, not urgent.
+          { TTL: 6 * 3600, urgency: 'normal', timeout: 10_000 },
+        )
+      } catch (err) {
+        const status = (err as { statusCode?: number }).statusCode
+        if (status === 404 || status === 410) gone.push(s.endpoint as string)
+      }
+    }),
+  )
+  if (gone.length) await db.from('push_subscriptions').delete().in('endpoint', gone)
 }
 
 async function actionDisconnect(req: Request): Promise<Response> {

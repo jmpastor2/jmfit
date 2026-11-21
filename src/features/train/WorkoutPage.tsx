@@ -1,4 +1,5 @@
 import { clsx } from 'clsx'
+import { BandSessionCard } from '@/features/state/BandSession'
 import { Repeat, Trash2, Trophy } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -179,6 +180,7 @@ function WorkoutDetail({ workout }: { workout: WorkoutFull }) {
           unit={workout.bodyweight != null ? 'kg' : undefined}
         />
       </section>
+      <BandSessionCard workout={workout} />
       {workout.notes && (
         <p className="mb-5 whitespace-pre-line border-l-2 border-line-strong pl-3 text-[14px] text-ink-2">
           {workout.notes}

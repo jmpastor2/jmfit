@@ -2,14 +2,14 @@
  * Sessions the band recorded outside Forja (football, a swim, padel…) and what they load.
  * Pure functions.
  *
- * Walks are left out: they are daily life, not training. A strength session the band recorded
+ * Walks and household chores are left out: they are daily life, not training. A strength session the band recorded
  * at the time of a Forja session is that same session: it is not counted twice.
  */
 import type { WorkoutFull } from '@/data/rows'
 import type { HealthWorkout, Muscle } from '@/domain/types'
 
 const STRENGTH = new Set(['STRENGTH_TRAINING', 'WEIGHTLIFTING', 'WEIGHTS'])
-const NOT_TRAINING = new Set(['WALKING'])
+const NOT_TRAINING = new Set(['WALKING', 'HOUSEHOLD_CHORES'])
 
 /** Muscles a sport leaves tired: enough to not train them hard the next day. */
 export const ACTIVITY_MUSCLES: Readonly<Record<string, readonly Muscle[]>> = {
@@ -63,4 +63,27 @@ export function activityLoads(
       at: a.startedAt,
       name: activityName(a),
     }))
+}
+
+/**
+ * The band's recording of a Forja session: the strength session (or any session) it saw
+ * starting within the Forja one, or up to 45 minutes around it. The longest wins.
+ */
+export function bandSessionFor(
+  workout: Pick<WorkoutFull, 'startedAt' | 'endedAt'>,
+  health: readonly HealthWorkout[],
+): HealthWorkout | null {
+  const start = Date.parse(workout.startedAt)
+  const end = workout.endedAt ? Date.parse(workout.endedAt) : start + 2 * 3_600_000
+  const from = start - SAME_SESSION_MIN * 60_000
+  const to = end + SAME_SESSION_MIN * 60_000
+  return (
+    health
+      .filter((h) => !NOT_TRAINING.has(h.activity))
+      .filter((h) => {
+        const t = Date.parse(h.startedAt)
+        return t >= from && t <= to
+      })
+      .toSorted((a, b) => (b.durationS ?? 0) - (a.durationS ?? 0))[0] ?? null
+  )
 }

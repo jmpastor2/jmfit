@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { HealthWorkout } from '@/domain/types'
-import { activityLoads, activityName, otherActivities } from './activities'
+import { activityLoads, activityName, bandSessionFor, otherActivities } from './activities'
 
 const hw = (
   activity: string,
@@ -50,5 +50,18 @@ describe('activityName and activityLoads', () => {
         name: 'Fútbol',
       },
     ])
+  })
+})
+
+describe('bandSessionFor', () => {
+  it("finds the band's recording of a Forja session, never a walk", () => {
+    const forja = { startedAt: '2026-11-09T05:52:00Z', endedAt: '2026-11-09T07:08:00Z' }
+    const found = bandSessionFor(forja, [
+      hw('WALKING', '2026-11-09T05:55:00Z'),
+      hw('STRENGTH_TRAINING', '2026-11-09T05:56:00Z', { durationS: 4900 }),
+      hw('WEIGHTS', '2026-11-09T12:00:00Z'),
+    ])
+    expect(found).toMatchObject({ activity: 'STRENGTH_TRAINING', durationS: 4900 })
+    expect(bandSessionFor(forja, [hw('SOCCER', '2026-11-10T19:00:00Z')])).toBeNull()
   })
 })

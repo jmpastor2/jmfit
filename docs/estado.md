@@ -167,6 +167,15 @@ Forja 1.0 sustituye a JM Fit v3 (la app vieja queda en el historial de git; su e
   mancuernas «Kg por mancuerna»; pila y polea lo que marca la placa. Con discos, «Cada lado» con
   los discos y los kg por lado (también en máquinas de discos), justo debajo del peso.
 
+- 2026-11-22 (pulsera en todo): aviso por la mañana tras la sincronización (05:00–11:59 Madrid, una
+  vez al día con `health_connections.morning_push_on`): noche y pulso frente a la media; los lunes, la
+  semana (sesiones, deporte, sueño, pasos). Mensaje en `functions/google-health/morning.ts` (solo
+  cifras medidas, nunca la recuperación); se desactiva en Ajustes → Pulsera (`profiles.morning_push`,
+  migración `20261122000000`, aplicada). «Según la pulsera» en el resumen y en cada sesión del
+  historial (pulso medio, kcal, carga cardio, zonas; `bandSessionFor`), barra de zonas en «Otras
+  actividades». Calorías de hoy = objetivo + lo que la pulsera ve por encima de un día normal (solo
+  hacia arriba, hasta +600). Las tareas del hogar no cuentan como actividad.
+
 ## Pendiente
 
 1. Publicar: GitHub → Settings → Pages → Source: **GitHub Actions** (una vez), y push a `main`.

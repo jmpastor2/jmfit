@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Field, Input, Select } from '@/components/ui/Field'
 import { useToast } from '@/components/ui/Toast'
 import { SectionTitle, ToggleRow } from '@/components/ui/primitives'
-import { useMe, useUpdateProfile } from '@/data/hooks'
+import { queued, useMe, useUpdateProfile } from '@/data/hooks'
 import { formatNumber, localDateKey } from '@/domain/training'
 import type { Experience, Goal } from '@/domain/types'
 import { EXPERIENCE_LABEL, GOAL_LABEL, GOAL_ORDER } from '@/features/programs/labels'
@@ -219,6 +219,15 @@ export function SettingsPage() {
             hint="Además de la vibración."
           />
           <RestPushToggle />
+        </Group>
+
+        <Group title="Pulsera">
+          <ToggleRow
+            checked={me.morningPush}
+            onChange={(v) => queued(update.mutateAsync({ morningPush: v }))}
+            label="Aviso por la mañana"
+            hint="Tras la sincronización de las 8:00: cómo dormiste y tu pulso frente a tu media. Los lunes, tu semana. Llega a los dispositivos con el aviso de descanso activado."
+          />
         </Group>
 
         <Group title="Macros objetivo">

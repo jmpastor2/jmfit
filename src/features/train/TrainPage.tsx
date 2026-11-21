@@ -7,7 +7,7 @@ import { Badge, SectionTitle, Skeleton } from '@/components/ui/primitives'
 import { useActiveProgram, useScans, useSets, useWorkouts } from '@/data/hooks'
 import type { Program, WorkoutFull } from '@/data/rows'
 import { formatNumber, tonnage } from '@/domain/training'
-import type { Exercise } from '@/domain/types'
+import type { Exercise, ZoneMinutes } from '@/domain/types'
 import { useExerciseLookup } from '@/features/exercise/lookup'
 import { mesoWeek, useStartWorkout } from '@/features/session/useStartWorkout'
 import { useNow } from '@/lib/useNow'
@@ -93,7 +93,10 @@ function BandActivities() {
       <SectionTitle>Otras actividades · pulsera</SectionTitle>
       <ul className="divide-y divide-line border-y border-line">
         {recent.map((a) => (
-          <li key={a.id} className="flex min-h-[52px] items-center gap-3 py-2">
+          <li
+            key={a.id}
+            className="flex min-h-[52px] flex-wrap items-center gap-x-3 gap-y-1.5 py-2"
+          >
             <span className="min-w-0 flex-1">
               <span className="block text-[15px] font-medium">{activityName(a)}</span>
               <span className="block text-[12.5px] text-muted">
@@ -109,6 +112,7 @@ function BandActivities() {
               </span>
               {a.kcal ? <span className="text-[12px] text-muted">{a.kcal} kcal</span> : null}
             </span>
+            {a.zones && <ZoneStrip zones={a.zones} />}
           </li>
         ))}
       </ul>
@@ -316,5 +320,28 @@ function History() {
         </>
       )}
     </section>
+  )
+}
+
+/** A thin bar of the session's minutes per heart rate zone, light to peak. */
+function ZoneStrip({ zones }: { zones: ZoneMinutes }) {
+  const parts = [
+    [zones.light ?? 0, 'var(--muted)'],
+    [zones.moderate ?? 0, 'var(--gold-dark)'],
+    [zones.vigorous ?? 0, 'var(--gold)'],
+    [zones.peak ?? 0, 'var(--gold-light)'],
+  ] as const
+  const total = parts.reduce((a, [m]) => a + m, 0)
+  if (!total) return null
+  return (
+    <span
+      className="flex h-1.5 w-full overflow-hidden rounded-full"
+      role="img"
+      aria-label={`Zonas: ligera ${zones.light ?? 0}, moderada ${zones.moderate ?? 0}, intensa ${zones.vigorous ?? 0}, máxima ${zones.peak ?? 0} minutos`}
+    >
+      {parts.map(([m, c], i) =>
+        m ? <span key={i} style={{ width: `${(m / total) * 100}%`, background: c }} /> : null,
+      )}
+    </span>
   )
 }

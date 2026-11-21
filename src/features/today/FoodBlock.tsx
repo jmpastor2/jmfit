@@ -59,9 +59,15 @@ export function FoodBlock({ now, bodyweight }: { now: Date; bodyweight: number |
       <FoodRow
         label="Hoy"
         day={s.today}
-        kcalTarget={s.kcalTarget}
+        kcalTarget={s.kcalTargetToday}
         proteinTarget={s.proteinTarget}
       />
+      {s.activityExtra > 0 && s.kcalTargetToday != null && (
+        <p className="-mt-1 mb-3 text-[12px] text-gold">
+          +{s.activityExtra} kcal hoy por tu actividad (lo que la pulsera ve por encima de un día
+          normal).
+        </p>
+      )}
       <FoodRow
         label="Ayer"
         day={s.yesterday}

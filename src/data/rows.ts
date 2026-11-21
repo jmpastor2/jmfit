@@ -40,6 +40,8 @@ export interface Profile {
   barKg: number
   platesKg: number[]
   restSound: boolean
+  /** Morning notification after the band's sync (Monday: the week). */
+  morningPush: boolean
   activeProgramId: string | null
   targetKcal: number | null
   targetProtein: number | null
@@ -61,6 +63,7 @@ export interface ProfileRow {
   bar_kg: string | number
   plates_kg: (string | number)[]
   rest_sound: boolean
+  morning_push?: boolean
   active_program_id: string | null
   target_kcal: number | null
   target_protein: number | null
@@ -82,6 +85,7 @@ export const toProfile = (r: ProfileRow): Profile => ({
   barKg: num(r.bar_kg) ?? 20,
   platesKg: (r.plates_kg ?? []).map((p) => num(p) ?? 0).filter((p) => p > 0),
   restSound: r.rest_sound,
+  morningPush: r.morning_push ?? true,
   activeProgramId: r.active_program_id,
   targetKcal: r.target_kcal,
   targetProtein: r.target_protein,
@@ -102,6 +106,7 @@ export function profilePatch(p: Partial<Profile>): Partial<ProfileRow> {
   if (p.barKg !== undefined) out.bar_kg = p.barKg
   if (p.platesKg !== undefined) out.plates_kg = p.platesKg
   if (p.restSound !== undefined) out.rest_sound = p.restSound
+  if (p.morningPush !== undefined) out.morning_push = p.morningPush
   if (p.activeProgramId !== undefined) out.active_program_id = p.activeProgramId
   if (p.targetKcal !== undefined) out.target_kcal = p.targetKcal
   if (p.targetProtein !== undefined) out.target_protein = p.targetProtein

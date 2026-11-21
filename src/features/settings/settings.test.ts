@@ -16,6 +16,7 @@ const profile: Profile = {
   barKg: 20,
   platesKg: [1.25, 25, 20, 10, 5, 2.5, 15],
   restSound: true,
+  morningPush: true,
   activeProgramId: null,
   targetKcal: 2600,
   targetProtein: 160,

@@ -22,6 +22,7 @@ import {
   signed,
 } from '@/features/train/history'
 import { useNow } from '@/lib/useNow'
+import { BandSessionCard } from '@/features/state/BandSession'
 import { ProgramSwapsSection } from './ProgramSwaps'
 import {
   changeOf,
@@ -158,6 +159,8 @@ function Summary({ workout, workouts }: { workout: WorkoutFull; workouts: Workou
       </section>
 
       <ProgressSection rows={data.progress} lookup={lookup} now={now} />
+
+      <BandSessionCard workout={workout} />
 
       <section className="border-t border-line py-5">
         <h2 className="spec mb-3 text-ink-2">Récords batidos</h2>
